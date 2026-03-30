@@ -25,7 +25,6 @@ Quiztography is a personal-use Quizlet-style study app built with a mobile-first
 - Auto-grading for objective questions and guided self-review for written responses.
 - Notes import from pasted text or picked text files.
 - Local dashboard with all sets, recent activity, due cards, and saved test scores.
-- Seeded sample data for first launch.
 
 ## Project Structure
 
