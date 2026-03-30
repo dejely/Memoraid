@@ -1,0 +1,107 @@
+name: Build Release APK
+
+on:
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-release-apk-${{ github.event.release.tag_name || github.run_id }}
+  cancel-in-progress: false
+
+jobs:
+  build-android-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      CI: 1
+      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+    steps:
+      - name: Validate Expo token
+        run: |
+          if [ -z "$EXPO_TOKEN" ]; then
+            echo "Missing EXPO_TOKEN GitHub secret."
+            echo "Create an Expo access token and save it as the EXPO_TOKEN repository secret."
+            exit 1
+          fi
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+          packager: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Ensure the Expo project is linked
+        run: |
+          if ! grep -q '"projectId"' app.json; then
+            echo "This repo is not linked to an Expo project yet."
+            echo "Run 'npx eas-cli init' locally once, commit the generated projectId in app.json, then re-run this workflow."
+            exit 1
+          fi
+
+      - name: Trigger release APK build
+        run: >
+          npx eas-cli build
+          --platform android
+          --profile apk-release
+          --non-interactive
+          --wait
+          --json
+          --message "GitHub release ${RELEASE_TAG:-manual}"
+          > build.json
+
+      - name: Summarize build result
+        if: always()
+        run: |
+          node <<'EOF'
+          const fs = require("node:fs");
+
+          if (!fs.existsSync("build.json")) {
+            process.exit(0);
+          }
+
+          const raw = fs.readFileSync("build.json", "utf8").trim();
+          if (!raw) {
+            process.exit(0);
+          }
+
+          const parsed = JSON.parse(raw);
+          const build = Array.isArray(parsed) ? parsed[0] : parsed;
+
+          const detailUrl =
+            build?.artifacts?.buildUrl ??
+            build?.artifacts?.applicationArchiveUrl ??
+            build?.buildDetailsPageUrl ??
+            build?.logs?.buildDetailsPageUrl;
+
+          const lines = [
+            "## Android APK Build",
+            `- Status: \`${build?.status ?? "unknown"}\``,
+            `- Build ID: \`${build?.id ?? "unknown"}\``,
+          ];
+
+          if (detailUrl) {
+            lines.push(`- Download or inspect: ${detailUrl}`);
+          }
+
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+          EOF
