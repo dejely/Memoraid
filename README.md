@@ -1,6 +1,6 @@
-# Quiztography
+# Memoraid
 
-Quiztography is a personal-use Quizlet-style study app built with a mobile-first Expo stack. It runs locally in Expo Go for the first version, persists data with `expo-sqlite`, and keeps AI plus cloud sync behind service interfaces instead of hardcoding them into the client.
+Memoraid is a personal-use Quizlet-style study app built with a mobile-first Expo stack. It runs locally in Expo Go for the first version, persists data with `expo-sqlite`, and keeps AI plus cloud sync behind service interfaces instead of hardcoding them into the client.
 
 ## Stack
 
@@ -78,14 +78,14 @@ SQLite tables created on boot:
 - `test_questions`
 - `review_stats`
 
-The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/client.ts) and schema versioned in [`src/db/schema.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/schema.ts).
+The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub/Memoraid/src/db/client.ts) and schema versioned in [`src/db/schema.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/schema.ts).
 
 ## Future-Ready Layers
 
-- AI generation interface: [`src/services/ai/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/ai/types.ts)
-- Local parser orchestration: [`src/services/import/study-import-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/import/study-import-service.ts)
-- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/sync/types.ts)
-- Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/secure/preferences-service.ts)
+- AI generation interface: [`src/services/ai/types.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/ai/types.ts)
+- Local parser orchestration: [`src/services/import/study-import-service.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/import/study-import-service.ts)
+- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/sync/types.ts)
+- Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/secure/preferences-service.ts)
 
 ## Setup
 
