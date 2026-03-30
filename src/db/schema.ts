@@ -1,4 +1,4 @@
-export const LATEST_DB_VERSION = 1;
+export const LATEST_DB_VERSION = 2;
 
 export const MIGRATIONS: Record<number, string> = {
   1: `
@@ -89,5 +89,16 @@ export const MIGRATIONS: Record<number, string> = {
     CREATE INDEX IF NOT EXISTS idx_review_stats_deck_due ON review_stats(deck_id, due_at);
     CREATE INDEX IF NOT EXISTS idx_sessions_updated_at ON sessions(updated_at DESC);
     CREATE INDEX IF NOT EXISTS idx_test_attempts_finished_at ON test_attempts(finished_at DESC);
+  `,
+  2: `
+    DELETE FROM decks
+    WHERE title = 'World Geography Essentials'
+      AND description = 'Fast refreshers for capitals, climate, and regional landmarks.'
+      AND tags_json = '["geography","travel","seeded"]';
+
+    DELETE FROM decks
+    WHERE title = 'Biology Foundations'
+      AND description = 'Short, high-yield cell and genetics notes for quick study blocks.'
+      AND tags_json = '["biology","science","seeded"]';
   `,
 };
