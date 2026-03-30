@@ -23,6 +23,7 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
   const queryClient = useQueryClient();
 
   const translateX = useRef(new Animated.Value(0)).current;
+  const flipAnimation = useRef(new Animated.Value(0)).current;
 
   const store = useFlashcardPlayerStore((state) => state);
   const cardIds = deckQuery.data?.cards.map((card) => card.id) ?? [];
@@ -103,6 +104,19 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
   const currentCard = currentCardId ? cardMap.get(currentCardId) : undefined;
   const isLastCard = store.currentIndex >= Math.max(0, store.order.length - 1);
 
+  useEffect(() => {
+    flipAnimation.stopAnimation();
+    flipAnimation.setValue(0);
+  }, [currentCardId, flipAnimation]);
+
+  useEffect(() => {
+    Animated.timing(flipAnimation, {
+      toValue: store.flipped ? 180 : 0,
+      duration: 220,
+      useNativeDriver: true,
+    }).start();
+  }, [flipAnimation, store.flipped]);
+
   function springBack() {
     Animated.spring(translateX, {
       toValue: 0,
@@ -171,6 +185,10 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
     store.next();
   }
 
+  function handleFlip(): void {
+    store.flip();
+  }
+
   if (deckQuery.isLoading || sessionQuery.isLoading) {
     return <LoadingState message="Loading flashcards and your last session..." />;
   }
@@ -221,8 +239,8 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
           transform: [{ translateX }, { rotate: rotation }],
         }}
       >
-        <Pressable onPress={store.flip}>
-          <FlashcardPanel card={currentCard} flipped={store.flipped} />
+        <Pressable onPress={handleFlip}>
+          <FlashcardPanel card={currentCard} flipAnimation={flipAnimation} />
         </Pressable>
       </Animated.View>
 
@@ -234,7 +252,7 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
           disabled={store.currentIndex === 0}
           onPress={store.previous}
         />
-        <PrimaryButton className="flex-1" label={store.flipped ? "Show term" : "Flip"} variant="secondary" onPress={store.flip} />
+        <PrimaryButton className="flex-1" label={store.flipped ? "Show term" : "Flip"} variant="secondary" onPress={handleFlip} />
         <PrimaryButton
           className="flex-1"
           label={isLastCard ? "Finish" : "Next"}
