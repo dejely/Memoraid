@@ -55,18 +55,18 @@ jobs:
           node-version: 20
           cache: npm
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Android project with Expo prebuild
+        run: npx expo prebuild -p android --no-install --clean
+
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: 17
           cache: gradle
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Generate Android project with Expo prebuild
-        run: npx expo prebuild -p android --no-install --clean
 
       - name: Restore release keystore
         env:
