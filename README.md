@@ -149,6 +149,17 @@ Notes:
 - The current Android application id is `com.dejel.memoraid` in `app.json`. Change it before your first public release if you want a different package id.
 - Local EAS builds require your own Android toolchain on this machine, including Android SDK/NDK and Java.
 
+## GitHub Release APK Workflow
+
+Publishing a GitHub Release now triggers [`.github/workflows/release-apk.yml`](/home/dejel/Documents/GitHub/Quiztography/.github/workflows/release-apk.yml), which starts an Android APK build on EAS using the `apk-release` profile.
+
+Before the workflow can succeed:
+
+1. Run `npx eas-cli init` locally once and commit the generated `extra.eas.projectId` back into `app.json`.
+2. Create a GitHub repository secret named `EXPO_TOKEN` with an Expo access token for the account that owns the project.
+
+The workflow also supports manual runs from the GitHub Actions tab via `workflow_dispatch`.
+
 ## Notes Import Format
 
 Supported local parser formats include:
