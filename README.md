@@ -78,14 +78,14 @@ SQLite tables created on boot:
 - `test_questions`
 - `review_stats`
 
-The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/client.ts) and schema versioned in [`src/db/schema.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/schema.ts).
+The database is initialized in [`src/db/client.ts`](src/db/client.ts) and schema versioned in [`src/db/schema.ts`](src/db/schema.ts).
 
 ## Future-Ready Layers
 
-- AI generation interface: [`src/services/ai/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/ai/types.ts)
-- Local parser orchestration: [`src/services/import/study-import-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/import/study-import-service.ts)
-- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/sync/types.ts)
-- Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/secure/preferences-service.ts)
+- AI generation interface: [`src/services/ai/types.ts`](src/db/client.ts)
+- Local parser orchestration: [`src/services/import/study-import-service.ts`](src/services/import/study-import-service.ts)
+- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](src/services/sync/types.ts)
+- Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](src/services/secure/preferences-service.ts)
 
 ## Setup
 
@@ -151,7 +151,7 @@ Notes:
 
 ## GitHub Release APK Workflow
 
-Publishing a GitHub Release now triggers [`.github/workflows/release-apk.yml`](/home/dejel/Documents/GitHub/Quiztography/.github/workflows/release-apk.yml), which builds a signed Android APK directly on the GitHub Actions runner using Expo prebuild plus Gradle. It does not use EAS cloud build queues.
+Publishing a GitHub Release now triggers [`.github/workflows/release-apk.yml`](.github/workflows/release-apk.yml), which builds a signed Android APK directly on the GitHub Actions runner using Expo prebuild plus Gradle. It does not use EAS cloud build queues.
 
 Before the workflow can succeed:
 
