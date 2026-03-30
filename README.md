@@ -151,14 +151,15 @@ Notes:
 
 ## GitHub Release APK Workflow
 
-Publishing a GitHub Release now triggers [`.github/workflows/release-apk.yml`](/home/dejel/Documents/GitHub/Quiztography/.github/workflows/release-apk.yml), which starts an Android APK build on EAS using the `apk-release` profile.
+Publishing a GitHub Release now triggers [`.github/workflows/release-apk.yml`](/home/dejel/Documents/GitHub/Quiztography/.github/workflows/release-apk.yml), which builds a signed Android APK directly on the GitHub Actions runner using Expo prebuild plus Gradle. It does not use EAS cloud build queues.
 
 Before the workflow can succeed:
 
-1. Run `npx eas-cli init` locally once and commit the generated `extra.eas.projectId` back into `app.json`.
-2. Create a GitHub repository secret named `EXPO_TOKEN` with an Expo access token for the account that owns the project.
+1. Create an Android release keystore.
+2. Add these GitHub repository secrets:
+   `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
 
-The workflow also supports manual runs from the GitHub Actions tab via `workflow_dispatch`.
+The workflow uploads the APK as a GitHub Actions artifact and, on published releases, attaches it to the GitHub Release. It also supports manual runs from the GitHub Actions tab via `workflow_dispatch`.
 
 ## Notes Import Format
 

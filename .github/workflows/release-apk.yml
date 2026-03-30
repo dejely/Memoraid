@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: build-release-apk-${{ github.event.release.tag_name || github.run_id }}
@@ -19,15 +19,30 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
-      CI: 1
-      EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-      RELEASE_TAG: ${{ github.event.release.tag_name || github.ref_name }}
+      CI: true
+      RELEASE_TAG: ${{ github.event.release.tag_name || format('manual-{0}', github.run_number) }}
     steps:
-      - name: Validate Expo token
+      - name: Validate signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -z "$EXPO_TOKEN" ]; then
-            echo "Missing EXPO_TOKEN GitHub secret."
-            echo "Create an Expo access token and save it as the EXPO_TOKEN repository secret."
+          missing=0
+
+          for name in \
+            ANDROID_KEYSTORE_BASE64 \
+            ANDROID_KEYSTORE_PASSWORD \
+            ANDROID_KEY_ALIAS \
+            ANDROID_KEY_PASSWORD; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required GitHub secret: $name"
+              missing=1
+            fi
+          done
+
+          if [ "$missing" -ne 0 ]; then
             exit 1
           fi
 
@@ -40,68 +55,62 @@ jobs:
           node-version: 20
           cache: npm
 
-      - name: Setup Expo and EAS
-        uses: expo/expo-github-action@v8
+      - name: Setup Java
+        uses: actions/setup-java@v4
         with:
-          eas-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
-          packager: npm
+          distribution: temurin
+          java-version: 17
+          cache: gradle
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Ensure the Expo project is linked
+      - name: Generate Android project with Expo prebuild
+        run: npx expo prebuild -p android --no-install --clean
+
+      - name: Restore release keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
         run: |
-          if ! grep -q '"projectId"' app.json; then
-            echo "This repo is not linked to an Expo project yet."
-            echo "Run 'npx eas-cli init' locally once, commit the generated projectId in app.json, then re-run this workflow."
-            exit 1
-          fi
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > android/app/release.keystore
 
-      - name: Trigger release APK build
-        run: >
-          npx eas-cli build
-          --platform android
-          --profile apk-release
-          --non-interactive
-          --wait
-          --json
-          --message "GitHub release ${RELEASE_TAG:-manual}"
-          > build.json
-
-      - name: Summarize build result
-        if: always()
+      - name: Configure Android signing properties
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          node <<'EOF'
-          const fs = require("node:fs");
-
-          if (!fs.existsSync("build.json")) {
-            process.exit(0);
-          }
-
-          const raw = fs.readFileSync("build.json", "utf8").trim();
-          if (!raw) {
-            process.exit(0);
-          }
-
-          const parsed = JSON.parse(raw);
-          const build = Array.isArray(parsed) ? parsed[0] : parsed;
-
-          const detailUrl =
-            build?.artifacts?.buildUrl ??
-            build?.artifacts?.applicationArchiveUrl ??
-            build?.buildDetailsPageUrl ??
-            build?.logs?.buildDetailsPageUrl;
-
-          const lines = [
-            "## Android APK Build",
-            `- Status: \`${build?.status ?? "unknown"}\``,
-            `- Build ID: \`${build?.id ?? "unknown"}\``,
-          ];
-
-          if (detailUrl) {
-            lines.push(`- Download or inspect: ${detailUrl}`);
-          }
-
-          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${lines.join("\n")}\n`);
+          cat <<EOF >> android/gradle.properties
+          MEMORAID_UPLOAD_STORE_FILE=release.keystore
+          MEMORAID_UPLOAD_KEY_ALIAS=${ANDROID_KEY_ALIAS}
+          MEMORAID_UPLOAD_STORE_PASSWORD=${ANDROID_KEYSTORE_PASSWORD}
+          MEMORAID_UPLOAD_KEY_PASSWORD=${ANDROID_KEY_PASSWORD}
           EOF
+
+      - name: Patch generated Gradle config for release signing
+        run: node .github/scripts/configure-android-signing.mjs
+
+      - name: Build signed release APK
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew app:assembleRelease
+
+      - name: Rename APK
+        run: |
+          mv android/app/build/outputs/apk/release/app-release.apk \
+            android/app/build/outputs/apk/release/memoraid-${RELEASE_TAG}.apk
+
+      - name: Upload workflow artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: memoraid-apk-${{ env.RELEASE_TAG }}
+          path: android/app/build/outputs/apk/release/memoraid-${{ env.RELEASE_TAG }}.apk
+          if-no-files-found: error
+
+      - name: Attach APK to GitHub release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/release/memoraid-${{ env.RELEASE_TAG }}.apk
+          overwrite_files: true
