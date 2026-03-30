@@ -5,7 +5,10 @@
     "scheme": "quiztography",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "package": "com.dejel.quiztography"
+    },
     "plugins": [
       "expo-router",
       "expo-document-picker",
