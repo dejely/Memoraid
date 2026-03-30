@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Quiztography",
+    "slug": "quiztography",
+    "scheme": "quiztography",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "plugins": [
+      "expo-router",
+      "expo-document-picker",
+      "expo-secure-store",
+      "expo-sqlite"
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
