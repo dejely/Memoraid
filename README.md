@@ -78,14 +78,14 @@ SQLite tables created on boot:
 - `test_questions`
 - `review_stats`
 
-The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub/Memoraid/src/db/client.ts) and schema versioned in [`src/db/schema.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/schema.ts).
+The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/client.ts) and schema versioned in [`src/db/schema.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/schema.ts).
 
 ## Future-Ready Layers
 
-- AI generation interface: [`src/services/ai/types.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/ai/types.ts)
-- Local parser orchestration: [`src/services/import/study-import-service.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/import/study-import-service.ts)
-- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/sync/types.ts)
-- Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](/home/dejel/Documents/GitHub/Memoraid/src/services/secure/preferences-service.ts)
+- AI generation interface: [`src/services/ai/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/ai/types.ts)
+- Local parser orchestration: [`src/services/import/study-import-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/import/study-import-service.ts)
+- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/sync/types.ts)
+- Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/secure/preferences-service.ts)
 
 ## Setup
 
@@ -111,7 +111,30 @@ npm run android
 npm run ios
 npm run web
 npm run typecheck
+npm run apk:release
+npm run aab:release
 ```
+
+## Android Release Builds
+
+For an installable release APK:
+
+```bash
+npx eas login
+npx eas-cli init
+npm run apk:release
+```
+
+For a Play Store style release bundle:
+
+```bash
+npm run aab:release
+```
+
+Notes:
+
+- Run `npx eas-cli init` once before your first EAS build. It will create or link the Expo project and write a fresh `extra.eas.projectId` into `app.json`.
+- The current Android application id is `com.dejel.memoraid` in `app.json`. Change it before your first public release if you want a different package id.
 
 ## Notes Import Format
 

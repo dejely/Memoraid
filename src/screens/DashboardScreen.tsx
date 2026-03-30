@@ -10,6 +10,7 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { StatTile } from "../components/StatTile";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
+import { APP_NAME } from "../constants/app";
 import { useDashboardData } from "../features/dashboard/hooks";
 import { formatDateTime, getRelativeTime } from "../utils/date";
 
@@ -42,7 +43,7 @@ export default function DashboardScreen() {
     <AppScreen>
       <ScreenHeader
         eyebrow="Local-first library"
-        title="Quiztography"
+        title={APP_NAME}
         subtitle="Everything stays on-device in SQLite, with parser, AI, and sync layers ready to swap behind backend interfaces later."
         trailing={<ThemeToggleButton />}
       />

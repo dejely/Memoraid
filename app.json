@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Quiztography",
-    "slug": "quiztography",
-    "scheme": "quiztography",
+    "name": "Memoraid",
+    "slug": "memoraid",
+    "scheme": "memoraid",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "android": {
-      "package": "com.dejel.quiztography"
+      "package": "com.dejel.memoraid"
     },
     "plugins": [
       "expo-router",
@@ -17,6 +17,9 @@
     ],
     "experiments": {
       "typedRoutes": false
+    },
+    "extra": {
+      "router": {}
     }
   }
 }
