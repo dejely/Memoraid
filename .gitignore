@@ -7,3 +7,6 @@ yarn-debug.*
 yarn-error.*
 .DS_Store
 android
+*.keystore
+*.jks
+android/app/release.keystore
