@@ -19,7 +19,11 @@
       "typedRoutes": false
     },
     "extra": {
-      "router": {}
-    }
+      "router": {},
+      "eas": {
+        "projectId": "87271002-d797-4833-93cd-f3cb4f7daa75"
+      }
+    },
+    "owner": "dejel"
   }
 }

@@ -113,6 +113,8 @@ npm run web
 npm run typecheck
 npm run apk:release
 npm run aab:release
+npm run apk:local
+npm run aab:local
 ```
 
 ## Android Release Builds
@@ -131,10 +133,21 @@ For a Play Store style release bundle:
 npm run aab:release
 ```
 
+For the same builds on your own machine instead of EAS cloud:
+
+```bash
+npx eas login
+npx eas-cli init
+npm run apk:local
+# or
+npm run aab:local
+```
+
 Notes:
 
 - Run `npx eas-cli init` once before your first EAS build. It will create or link the Expo project and write a fresh `extra.eas.projectId` into `app.json`.
 - The current Android application id is `com.dejel.memoraid` in `app.json`. Change it before your first public release if you want a different package id.
+- Local EAS builds require your own Android toolchain on this machine, including Android SDK/NDK and Java.
 
 ## Notes Import Format
 
