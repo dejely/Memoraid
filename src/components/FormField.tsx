@@ -8,6 +8,9 @@ type FormFieldProps = {
   onChangeText: (value: string) => void;
   placeholder?: string;
   multiline?: boolean;
+  secureTextEntry?: boolean;
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  autoCorrect?: boolean;
   className?: string;
 };
 
@@ -17,6 +20,9 @@ export function FormField({
   onChangeText,
   placeholder,
   multiline = false,
+  secureTextEntry = false,
+  autoCapitalize = "sentences",
+  autoCorrect = false,
   className,
 }: FormFieldProps) {
   return (
@@ -28,6 +34,9 @@ export function FormField({
         placeholder={placeholder}
         placeholderTextColor="#6f88b7"
         multiline={multiline}
+        secureTextEntry={secureTextEntry}
+        autoCapitalize={autoCapitalize}
+        autoCorrect={autoCorrect}
         textAlignVertical={multiline ? "top" : "center"}
         className={cn(
           "rounded-2xl border border-ink-200 bg-white px-4 py-3 text-base text-ink-900 dark:border-ink-600 dark:bg-ink-800 dark:text-white",

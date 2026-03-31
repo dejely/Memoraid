@@ -12,7 +12,11 @@
     "apk:release": "npx eas-cli build --platform android --profile apk-release",
     "aab:release": "npx eas-cli build --platform android --profile production",
     "apk:local": "npx eas-cli build --platform android --profile apk-release --local",
-    "aab:local": "npx eas-cli build --platform android --profile production --local"
+    "aab:local": "npx eas-cli build --platform android --profile production --local",
+    "backend:install": "npm install --prefix backend",
+    "backend:dev": "npm run dev --prefix backend",
+    "backend:migrate": "npm run migrate --prefix backend",
+    "backend:typecheck": "npm run typecheck --prefix backend"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.95.2",

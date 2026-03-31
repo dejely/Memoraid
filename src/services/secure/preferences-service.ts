@@ -9,7 +9,9 @@ const THEME_PREFERENCE_KEY = "quiztography.theme-preference";
 const DEFAULT_BACKEND_CONFIG: BackendConfig = {
   aiEnabled: false,
   syncEnabled: false,
+  provider: "local-only",
   apiBaseUrl: null,
+  accessToken: null,
 };
 
 export const DEFAULT_THEME_PREFERENCE: ThemePreference = "system";

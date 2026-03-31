@@ -1,4 +1,5 @@
 import { getDatabase } from "../client";
+import { enqueueDeckUpsert } from "./sync-repository";
 import { nowIso } from "../../utils/date";
 import type { ReviewResult, ReviewStats } from "../../types/models";
 
@@ -106,4 +107,6 @@ export async function recordReview(cardId: string, deckId: string, result: Revie
       nextState.lastResult,
     ],
   );
+
+  await enqueueDeckUpsert(deckId);
 }

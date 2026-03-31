@@ -1,5 +1,6 @@
 import { getDatabase } from "../client";
 import { mapCardRow, mapDeckSummaryRow } from "../mappers";
+import { enqueueDeckDelete, enqueueDeckUpsert } from "./sync-repository";
 import { nowIso } from "../../utils/date";
 import { createId } from "../../utils/ids";
 import type { Deck, DeckDraft, DeckSummary, SourceType } from "../../types/models";
@@ -159,6 +160,8 @@ export async function createDeck(input: DeckDraft): Promise<string> {
     }
   });
 
+  await enqueueDeckUpsert(deckId);
+
   return deckId;
 }
 
@@ -214,9 +217,12 @@ export async function updateDeck(deckId: string, input: DeckDraft): Promise<void
       }
     }
   });
+
+  await enqueueDeckUpsert(deckId);
 }
 
 export async function deleteDeck(deckId: string): Promise<void> {
   const database = await getDatabase();
   await database.runAsync("DELETE FROM decks WHERE id = ?;", [deckId]);
+  await enqueueDeckDelete(deckId);
 }

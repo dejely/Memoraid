@@ -3,6 +3,10 @@ export type ReviewResult = "easy" | "hard" | "correct" | "incorrect";
 export type SessionMode = "flashcard";
 export type QuestionType = "multiple_choice" | "true_false" | "written";
 export type ThemePreference = "system" | "light" | "dark";
+export type SyncProvider = "local-only" | "custom-api" | "supabase";
+export type SyncRuntimeState = "idle" | "disabled" | "verifying" | "ready" | "syncing" | "error";
+export type SyncEntityType = "deck" | "test_attempt";
+export type SyncOperation = "upsert" | "delete";
 
 export interface StudyCard {
   id: string;
@@ -154,11 +158,75 @@ export interface ImportPreview {
 export interface BackendConfig {
   aiEnabled: boolean;
   syncEnabled: boolean;
+  provider: SyncProvider;
   apiBaseUrl: string | null;
+  accessToken: string | null;
 }
 
 export interface SyncStatus {
-  provider: "local-only" | "supabase";
+  provider: SyncProvider;
+  apiBaseUrl: string | null;
   lastSyncedAt: string | null;
-  state: "idle" | "disabled";
+  lastVerifiedAt: string | null;
+  pendingChanges: number;
+  lastError: string | null;
+  serverName: string | null;
+  serverVersion: string | null;
+  state: SyncRuntimeState;
+}
+
+export interface SyncDeckRecord {
+  id: string;
+  title: string;
+  description: string;
+  tags: string[];
+  sourceType: SourceType;
+  createdAt: string;
+  updatedAt: string;
+  lastStudiedAt: string | null;
+  cards: Array<StudyCard & { reviewStats: ReviewStats | null }>;
+}
+
+export interface SyncTestAttemptRecord {
+  attempt: TestAttemptSummary;
+  questions: TestQuestionRecord[];
+}
+
+export interface SyncChangeSet {
+  decks: SyncDeckRecord[];
+  deletedDeckIds: string[];
+  testAttempts: SyncTestAttemptRecord[];
+}
+
+export interface SyncQueueEntry {
+  id: string;
+  entityType: SyncEntityType;
+  entityId: string;
+  operation: SyncOperation;
+  payloadJson: string;
+  createdAt: string;
+  updatedAt: string;
+  retryCount: number;
+  lastError: string | null;
+}
+
+export interface SyncServerInfo {
+  service: string;
+  version: string | null;
+  capabilities: string[];
+  checkedAt: string;
+}
+
+export interface SyncVerificationResult {
+  server: SyncServerInfo;
+}
+
+export interface SyncRunSummary {
+  pushedCount: number;
+  acknowledgedCount: number;
+  pulledCounts: {
+    decks: number;
+    testAttempts: number;
+  };
+  status: SyncStatus;
 }

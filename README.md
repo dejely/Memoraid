@@ -77,6 +77,8 @@ SQLite tables created on boot:
 - `test_attempts`
 - `test_questions`
 - `review_stats`
+- `sync_queue`
+- `sync_state`
 
 The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/client.ts) and schema versioned in [`src/db/schema.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/schema.ts).
 
@@ -86,6 +88,72 @@ The database is initialized in [`src/db/client.ts`](/home/dejel/Documents/GitHub
 - Local parser orchestration: [`src/services/import/study-import-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/import/study-import-service.ts)
 - Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/sync/types.ts)
 - Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/secure/preferences-service.ts)
+
+## Custom Sync API
+
+The app now includes a local-first sync integration for user-provided backend APIs:
+
+- Backend settings screen: [`src/screens/SyncSettingsScreen.tsx`](/home/dejel/Documents/GitHub/Quiztography/src/screens/SyncSettingsScreen.tsx)
+- Sync hooks: [`src/features/sync/hooks.ts`](/home/dejel/Documents/GitHub/Quiztography/src/features/sync/hooks.ts)
+- Sync queue and remote merge layer: [`src/db/repositories/sync-repository.ts`](/home/dejel/Documents/GitHub/Quiztography/src/db/repositories/sync-repository.ts)
+- Custom API provider: [`src/services/sync/custom-api-sync-service.ts`](/home/dejel/Documents/GitHub/Quiztography/src/services/sync/custom-api-sync-service.ts)
+
+Design notes:
+
+- The client never connects directly to a raw database.
+- Users provide a backend API base URL, not a Postgres/MySQL connection string.
+- Local SQLite remains the source of truth on-device, with a queue of pending changes for deck snapshots and test attempts.
+- Remote sync is designed around deck snapshots, deck deletes, and test attempt snapshots.
+
+Expected backend endpoints:
+
+- `GET /.well-known/memoraid-sync`
+- `POST /v1/sync/push`
+- `POST /v1/sync/pull`
+
+The current client expects a discovery response like:
+
+```json
+{
+  "service": "memoraid-sync",
+  "version": "1.0.0",
+  "capabilities": ["push", "pull"]
+}
+```
+
+Push requests send queued changes in this general shape:
+
+```json
+{
+  "cursor": "optional-server-cursor",
+  "client": {
+    "app": "Memoraid",
+    "platform": "android"
+  },
+  "changes": [
+    {
+      "id": "deck:deck_123",
+      "entityType": "deck",
+      "entityId": "deck_123",
+      "operation": "upsert",
+      "payload": {}
+    }
+  ]
+}
+```
+
+Pull responses should return:
+
+```json
+{
+  "cursor": "next-server-cursor",
+  "changes": {
+    "decks": [],
+    "deletedDeckIds": [],
+    "testAttempts": []
+  }
+}
+```
 
 ## Setup
 
@@ -115,6 +183,10 @@ npm run apk:release
 npm run aab:release
 npm run apk:local
 npm run aab:local
+npm run backend:install
+npm run backend:migrate
+npm run backend:dev
+npm run backend:typecheck
 ```
 
 ## Android Release Builds
@@ -160,6 +232,56 @@ Before the workflow can succeed:
    `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`
 
 The workflow uploads the APK as a GitHub Actions artifact and, on published releases, attaches it to the GitHub Release. It also supports manual runs from the GitHub Actions tab via `workflow_dispatch`.
+
+## Reference Sync Backend
+
+A reference backend now lives in [`backend/package.json`](/home/dejel/Documents/GitHub/Quiztography/backend/package.json) and implements the same Memoraid sync contract the mobile app expects.
+
+Stack:
+
+- Node.js
+- Express
+- PostgreSQL
+- Zod
+
+Key files:
+
+- Server entry: [`backend/src/index.ts`](/home/dejel/Documents/GitHub/Quiztography/backend/src/index.ts)
+- Postgres migration: [`backend/migrations/001_init.sql`](/home/dejel/Documents/GitHub/Quiztography/backend/migrations/001_init.sql)
+- Sync schemas: [`backend/src/sync/schemas.ts`](/home/dejel/Documents/GitHub/Quiztography/backend/src/sync/schemas.ts)
+- Sync service: [`backend/src/sync/service.ts`](/home/dejel/Documents/GitHub/Quiztography/backend/src/sync/service.ts)
+- Example env file: [`backend/.env.example`](/home/dejel/Documents/GitHub/Quiztography/backend/.env.example)
+
+Local setup:
+
+1. Create a PostgreSQL database.
+2. Copy `backend/.env.example` to `backend/.env` and update `DATABASE_URL`.
+3. Install backend dependencies:
+
+   ```bash
+   npm run backend:install
+   ```
+
+4. Run the database migration:
+
+   ```bash
+   npm run backend:migrate
+   ```
+
+5. Start the backend:
+
+   ```bash
+   npm run backend:dev
+   ```
+
+The backend exposes:
+
+- `GET /health`
+- `GET /.well-known/memoraid-sync`
+- `POST /v1/sync/push`
+- `POST /v1/sync/pull`
+
+If `SYNC_ACCESS_TOKEN` is set, the mobile app should use the same value in Sync Settings as its bearer token.
 
 ## Notes Import Format
 

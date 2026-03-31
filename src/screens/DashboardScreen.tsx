@@ -12,10 +12,13 @@ import { StatTile } from "../components/StatTile";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { APP_NAME } from "../constants/app";
 import { useDashboardData } from "../features/dashboard/hooks";
+import { useSyncNowMutation, useSyncStatus } from "../features/sync/hooks";
 import { formatDateTime, getRelativeTime } from "../utils/date";
 
 export default function DashboardScreen() {
   const dashboardQuery = useDashboardData();
+  const syncStatusQuery = useSyncStatus();
+  const syncNowMutation = useSyncNowMutation();
 
   if (dashboardQuery.isLoading) {
     return <LoadingState message="Loading decks, activity, and review data..." />;
@@ -38,13 +41,22 @@ export default function DashboardScreen() {
       : Math.round(
           dashboard.testHistory.reduce((sum, attempt) => sum + attempt.scorePercent, 0) / dashboard.testHistory.length,
         );
+  const syncStatus = syncStatusQuery.data;
+
+  async function handleSyncNow(): Promise<void> {
+    try {
+      await syncNowMutation.mutateAsync();
+    } catch {
+      // The settings screen carries the detailed error state.
+    }
+  }
 
   return (
     <AppScreen>
       <ScreenHeader
         eyebrow="Local-first library"
         title={APP_NAME}
-        subtitle="Everything stays on-device in SQLite, with parser, AI, and sync layers ready to swap behind backend interfaces later."
+        subtitle="Everything stays local-first in SQLite, with optional parser, AI, and sync features routed through backend interfaces."
         trailing={<ThemeToggleButton />}
       />
 
@@ -60,6 +72,35 @@ export default function DashboardScreen() {
         <View className="flex-row gap-3">
           <PrimaryButton className="flex-1 bg-white" textClassName="text-ink-900" label="New set" onPress={() => router.push("/sets/new")} />
           <PrimaryButton className="flex-1 border border-white/20 bg-white/10" textClassName="text-white" label="Import notes" onPress={() => router.push("/import")} />
+        </View>
+      </SectionCard>
+
+      <SectionCard className="gap-4">
+        <View className="gap-1">
+          <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">Sync backend</Text>
+          <Text className="text-xl font-semibold text-ink-900 dark:text-white">
+            {syncStatus?.provider === "custom-api" && syncStatus.apiBaseUrl ? syncStatus.apiBaseUrl : "Local only"}
+          </Text>
+          <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+            State: {syncStatus?.state ?? "disabled"} · Pending changes: {syncStatus?.pendingChanges ?? 0} · Last sync {formatDateTime(syncStatus?.lastSyncedAt)}
+          </Text>
+          {syncStatus?.lastError ? <Text className="text-sm leading-6 text-rose-600 dark:text-rose-300">{syncStatus.lastError}</Text> : null}
+        </View>
+
+        <View className="flex-row gap-3">
+          <PrimaryButton
+            className="flex-1"
+            label="Sync settings"
+            variant="secondary"
+            onPress={() => router.push("/settings")}
+          />
+          <PrimaryButton
+            className="flex-1"
+            label="Sync now"
+            loading={syncNowMutation.isPending}
+            disabled={!syncStatus || syncStatus.provider !== "custom-api" || !syncStatus.apiBaseUrl}
+            onPress={handleSyncNow}
+          />
         </View>
       </SectionCard>
 

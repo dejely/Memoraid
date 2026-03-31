@@ -1,4 +1,4 @@
-export const LATEST_DB_VERSION = 2;
+export const LATEST_DB_VERSION = 3;
 
 export const MIGRATIONS: Record<number, string> = {
   1: `
@@ -100,5 +100,63 @@ export const MIGRATIONS: Record<number, string> = {
     WHERE title = 'Biology Foundations'
       AND description = 'Short, high-yield cell and genetics notes for quick study blocks.'
       AND tags_json = '["biology","science","seeded"]';
+  `,
+  3: `
+    CREATE TABLE IF NOT EXISTS sync_queue (
+      id TEXT PRIMARY KEY NOT NULL,
+      entity_type TEXT NOT NULL,
+      entity_id TEXT NOT NULL,
+      operation TEXT NOT NULL,
+      payload_json TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      retry_count INTEGER NOT NULL DEFAULT 0,
+      last_error TEXT,
+      UNIQUE(entity_type, entity_id)
+    );
+
+    CREATE TABLE IF NOT EXISTS sync_state (
+      id TEXT PRIMARY KEY NOT NULL,
+      provider TEXT NOT NULL DEFAULT 'local-only',
+      state TEXT NOT NULL DEFAULT 'disabled',
+      api_base_url TEXT,
+      last_synced_at TEXT,
+      last_verified_at TEXT,
+      last_cursor TEXT,
+      last_error TEXT,
+      server_name TEXT,
+      server_version TEXT,
+      updated_at TEXT NOT NULL
+    );
+
+    INSERT INTO sync_state (
+      id,
+      provider,
+      state,
+      api_base_url,
+      last_synced_at,
+      last_verified_at,
+      last_cursor,
+      last_error,
+      server_name,
+      server_version,
+      updated_at
+    )
+    VALUES (
+      'default',
+      'local-only',
+      'disabled',
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      NULL,
+      CURRENT_TIMESTAMP
+    )
+    ON CONFLICT(id) DO NOTHING;
+
+    CREATE INDEX IF NOT EXISTS idx_sync_queue_updated_at ON sync_queue(updated_at ASC);
   `,
 };

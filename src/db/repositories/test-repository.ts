@@ -1,5 +1,6 @@
 import { getDatabase } from "../client";
 import { mapAttemptRow } from "../mappers";
+import { enqueueTestAttemptUpsert } from "./sync-repository";
 import { createId } from "../../utils/ids";
 import type {
   DeckSummary,
@@ -127,6 +128,8 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
       );
     }
   });
+
+  await enqueueTestAttemptUpsert(attemptId);
 
   return attemptId;
 }
