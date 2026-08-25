@@ -1,7 +1,9 @@
 import { router } from "expo-router";
-import { Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
+import { CloudMigrationCard } from "../components/CloudMigrationCard";
+import { DataErrorState } from "../components/DataErrorState";
 import { DeckCard } from "../components/DeckCard";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
@@ -10,15 +12,22 @@ import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { StatTile } from "../components/StatTile";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
+import { SignOutButton } from "../components/auth/SignOutButton";
 import { APP_NAME } from "../constants/app";
 import { useDashboardData } from "../features/dashboard/hooks";
+import { useAuth } from "../services/auth/AuthProvider";
 import { formatDateTime, getRelativeTime } from "../utils/date";
 
 export default function DashboardScreen() {
   const dashboardQuery = useDashboardData();
+  const { user } = useAuth();
 
   if (dashboardQuery.isLoading) {
     return <LoadingState message="Loading decks, activity, and review data..." />;
+  }
+
+  if (dashboardQuery.isError) {
+    return <DataErrorState onRetry={() => void dashboardQuery.refetch()} />;
   }
 
   const dashboard = dashboardQuery.data;
@@ -42,18 +51,24 @@ export default function DashboardScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Local-first library"
+        eyebrow={Platform.OS === "web" ? "Cloud study library" : "Local-first library"}
         title={APP_NAME}
-        subtitle="Everything stays on-device in SQLite, with parser, AI, and sync layers ready to swap behind backend interfaces later."
+        subtitle={
+          Platform.OS === "web"
+            ? "Your private study sets, review progress, and test history follow your account across browsers."
+            : "Your SQLite library stays on-device, with an optional one-time upload to your private web account."
+        }
         trailing={<ThemeToggleButton />}
       />
+
+      <CloudMigrationCard />
 
       <SectionCard className="gap-5 bg-ink-900">
         <View className="gap-2">
           <Text className="text-xs font-medium uppercase tracking-[2px] text-white/60">Today’s study pulse</Text>
           <Text className="text-3xl font-bold tracking-tight text-white">Keep your decks tight, current, and reviewable.</Text>
           <Text className="text-sm leading-6 text-white/75">
-            Create sets manually, import note files, resume flashcards, and run mixed test sessions from the same local library.
+            Create sets manually, import note files, resume flashcards, and run mixed test sessions from the same study library.
           </Text>
         </View>
 
@@ -131,6 +146,17 @@ export default function DashboardScreen() {
           ))
         )}
       </View>
+
+      <SectionCard className="gap-3">
+        <Text className="text-xs font-medium uppercase tracking-[2px] text-ink-500 dark:text-ink-300">Account</Text>
+        <Text className="text-lg font-semibold text-ink-900 dark:text-white">{user?.email ?? "Signed in"}</Text>
+        <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+          {Platform.OS === "web"
+            ? "This browser uses your private Supabase library and requires a connection to save changes."
+            : "Signing out does not remove the local SQLite library from this device."}
+        </Text>
+        <SignOutButton />
+      </SectionCard>
     </AppScreen>
   );
 }
