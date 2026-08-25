@@ -6,6 +6,10 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
+    "web": {
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
     "android": {
       "package": "com.dejel.memoraid"
     },

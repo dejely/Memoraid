@@ -2,12 +2,16 @@
   "name": "memoraid",
   "version": "1.0.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "web:build": "expo export --platform web --clear",
     "typecheck": "tsc --noEmit",
     "apk:release": "npx eas-cli build --platform android --profile apk-release",
     "aab:release": "npx eas-cli build --platform android --profile production",
@@ -15,6 +19,7 @@
     "aab:local": "npx eas-cli build --platform android --profile production --local"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-query": "^5.95.2",
     "clsx": "^2.1.1",
     "expo": "~54.0.33",
@@ -32,6 +37,7 @@
     "react-native": "0.81.5",
     "react-native-safe-area-context": "~5.6.0",
     "react-native-screens": "~4.16.0",
+    "react-native-url-polyfill": "^4.0.0",
     "react-native-web": "^0.21.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.4.17",
