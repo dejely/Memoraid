@@ -1,6 +1,7 @@
-import { Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
+import { DataErrorState } from "../components/DataErrorState";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { ScreenHeader } from "../components/ScreenHeader";
@@ -16,12 +17,27 @@ export default function HistoryScreen() {
     return <LoadingState message="Loading study activity and saved test attempts..." />;
   }
 
+  if (activityQuery.isError || testHistoryQuery.isError) {
+    return (
+      <DataErrorState
+        onRetry={() => {
+          void activityQuery.refetch();
+          void testHistoryQuery.refetch();
+        }}
+      />
+    );
+  }
+
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Saved locally"
+        eyebrow={Platform.OS === "web" ? "Saved to your account" : "Saved locally"}
         title="History"
-        subtitle="Study sessions and test attempts are persisted on-device so you can track your practice over time."
+        subtitle={
+          Platform.OS === "web"
+            ? "Study sessions and test attempts are saved privately to your account across browsers."
+            : "Study sessions and test attempts are persisted on-device so you can track your practice over time."
+        }
       />
 
       <View className="gap-3">

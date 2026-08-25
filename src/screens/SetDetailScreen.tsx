@@ -2,6 +2,7 @@ import { router } from "expo-router";
 import { Alert, Text, View } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
+import { DataErrorState } from "../components/DataErrorState";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -15,15 +16,17 @@ export default function SetDetailScreen({ deckId }: { deckId: string }) {
   const deckQuery = useDeck(deckId);
   const deleteDeckMutation = useDeleteDeckMutation();
 
-  async function confirmDelete(): Promise<void> {
-    Alert.alert("Delete study set", "This removes the set, cards, sessions, and saved test history from local storage.", [
+  function confirmDelete(): void {
+    Alert.alert("Delete study set", "This removes the set, cards, sessions, and saved test history from your library.", [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
         style: "destructive",
-        onPress: async () => {
-          await deleteDeckMutation.mutateAsync(deckId);
-          router.replace("/");
+        onPress: () => {
+          void deleteDeckMutation
+            .mutateAsync(deckId)
+            .then(() => router.replace("/"))
+            .catch(() => {});
         },
       },
     ]);
@@ -33,11 +36,15 @@ export default function SetDetailScreen({ deckId }: { deckId: string }) {
     return <LoadingState message="Loading study set..." />;
   }
 
+  if (deckQuery.isError) {
+    return <DataErrorState onRetry={() => void deckQuery.refetch()} />;
+  }
+
   if (!deckQuery.data) {
     return (
       <AppScreen>
         <ScreenHeader eyebrow="Missing set" title="Study set not found" />
-        <EmptyState title="Nothing here" message="The requested study set could not be found in local storage." />
+        <EmptyState title="Nothing here" message="The requested study set could not be found in your library." />
       </AppScreen>
     );
   }

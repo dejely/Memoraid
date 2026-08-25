@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Alert, Text, View } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
+import { DataErrorState } from "../components/DataErrorState";
 import { FormField } from "../components/FormField";
 import { LoadingState } from "../components/LoadingState";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -115,6 +116,10 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
     return <LoadingState message="Loading set details for editing..." />;
   }
 
+  if (isEditing && deckQuery.isError) {
+    return <DataErrorState onRetry={() => void deckQuery.refetch()} />;
+  }
+
   return (
     <AppScreen>
       <ScreenHeader
@@ -168,10 +173,10 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
       </SectionCard>
 
       <PrimaryButton
-        label={isEditing ? "Save changes" : "Create set"}
-        loading={createDeckMutation.isPending || updateDeckMutation.isPending}
-        onPress={handleSave}
-      />
+      label={isEditing ? "Save changes" : "Create set"}
+      loading={createDeckMutation.isPending || updateDeckMutation.isPending}
+      onPress={() => void handleSave().catch(() => {})}
+    />
     </AppScreen>
   );
 }
