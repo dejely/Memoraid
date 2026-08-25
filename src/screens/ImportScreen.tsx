@@ -1,6 +1,5 @@
 import * as DocumentPicker from "expo-document-picker";
 import { router } from "expo-router";
-import { File } from "expo-file-system";
 import { useState } from "react";
 import { Alert, Text, View } from "react-native";
 
@@ -11,6 +10,7 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { useCreateImportedDeckMutation, useImportPreviewMutation } from "../features/import/hooks";
+import { readPickedTextFile } from "../services/import/file-reader";
 import { splitTags } from "../utils/text";
 
 function stripExtension(fileName: string): string {
@@ -38,8 +38,7 @@ export default function ImportScreen() {
       }
 
       const asset = result.assets[0];
-      const file = new File(asset.uri);
-      const contents = await file.text();
+      const contents = await readPickedTextFile(asset.uri);
 
       setRawText(contents);
       setSourceLabel(asset.name);
@@ -110,7 +109,11 @@ export default function ImportScreen() {
         multiline
       />
 
-      <PrimaryButton label="Preview cards" loading={previewMutation.isPending} onPress={handlePreview} />
+      <PrimaryButton
+        label="Preview cards"
+        loading={previewMutation.isPending}
+        onPress={() => void handlePreview().catch(() => {})}
+      />
 
       {previewMutation.data ? (
         <View className="gap-3">
@@ -121,7 +124,7 @@ export default function ImportScreen() {
             <PrimaryButton
               label="Create imported set"
               loading={createImportedDeckMutation.isPending}
-              onPress={handleCreateSet}
+              onPress={() => void handleCreateSet().catch(() => {})}
             />
           </SectionCard>
 
