@@ -1,6 +1,6 @@
 # Memoraid
 
-Memoraid is a personal-use Quizlet-style study app built with a mobile-first Expo stack. It runs locally in Expo Go for the first version, persists data with `expo-sqlite`, and keeps AI plus cloud sync behind service interfaces instead of hardcoding them into the client.
+Memoraid is a Quizlet-style study app built with Expo for Android, iOS, and the web. Native builds retain their local `expo-sqlite` library, while the authenticated web build stores each user's private study data in Supabase and deploys as a static Expo Router app on Vercel.
 
 ## Stack
 
@@ -12,6 +12,7 @@ Memoraid is a personal-use Quizlet-style study app built with a mobile-first Exp
 - Zustand
 - TanStack Query
 - expo-sqlite
+- Supabase Auth and Postgres
 - expo-secure-store
 - expo-document-picker
 - expo-file-system
@@ -78,13 +79,13 @@ SQLite tables created on boot:
 - `test_questions`
 - `review_stats`
 
-The database is initialized in [`src/db/client.ts`](src/db/client.ts) and schema versioned in [`src/db/schema.ts`](src/db/schema.ts).
+The native database is initialized in [`src/db/client.ts`](src/db/client.ts) and schema versioned in [`src/db/schema.ts`](src/db/schema.ts). The web repositories use the owner-scoped Supabase schema in [`supabase/migrations`](supabase/migrations).
 
 ## Future-Ready Layers
 
-- AI generation interface: [`src/services/ai/types.ts`](src/db/client.ts)
+- AI generation interface: [`src/services/ai/types.ts`](src/services/ai/types.ts)
 - Local parser orchestration: [`src/services/import/study-import-service.ts`](src/services/import/study-import-service.ts)
-- Sync abstraction for later Supabase work: [`src/services/sync/types.ts`](src/services/sync/types.ts)
+- Platform-specific SQLite and Supabase repositories: [`src/db/repositories`](src/db/repositories)
 - Secure backend/app config storage: [`src/services/secure/preferences-service.ts`](src/services/secure/preferences-service.ts)
 
 ## Setup
@@ -95,13 +96,17 @@ The database is initialized in [`src/db/client.ts`](src/db/client.ts) and schema
    npm install
    ```
 
-2. Start Expo:
+2. Create a Supabase project and apply the migration in [`supabase/migrations`](supabase/migrations).
+
+3. Copy `.env.example` to `.env.local` and add the project's public URL and anon or publishable key. Never use a `service_role` key in an `EXPO_PUBLIC_` variable.
+
+4. Start Expo:
 
    ```bash
    npm start
    ```
 
-3. Open the project in Expo Go on iOS or Android.
+5. Open the project in Expo Go, or press `w` for the browser build. Sign in through the email magic link.
 
 ## Useful Scripts
 
@@ -110,6 +115,7 @@ npm start
 npm run android
 npm run ios
 npm run web
+npm run web:build
 npm run typecheck
 npm run apk:release
 npm run aab:release
@@ -148,6 +154,21 @@ Notes:
 - Run `npx eas-cli init` once before your first EAS build. It will create or link the Expo project and write a fresh `extra.eas.projectId` into `app.json`.
 - The current Android application id is `com.dejel.memoraid` in `app.json`. Change it before your first public release if you want a different package id.
 - Local EAS builds require your own Android toolchain on this machine, including Android SDK/NDK and Java.
+- Add the release app's `memoraid:///sign-in` callback (and the development callback printed by Expo) to Supabase Authentication redirect URLs before testing native magic links.
+
+## Web Deployment
+
+The web build is online-first and uses Supabase instead of browser SQLite. Each table is protected by row-level security and every query runs as the signed-in user. Native users can explicitly upload an existing local library once; local data is retained after the upload.
+
+The linked Vercel project is available at [memoraid-three.vercel.app](https://memoraid-three.vercel.app). It requires the two public Supabase environment variables and the included database migration before sign-in is enabled.
+
+Build the static site with:
+
+```bash
+npm run web:build
+```
+
+Vercel configuration, environment variables, Supabase magic-link redirects, preview behavior, and smoke checks are documented in [`docs/web-deployment.md`](docs/web-deployment.md). The same `dist/` frontend can later be embedded in Tauri while continuing to use Supabase.
 
 ## GitHub Release APK Workflow
 
@@ -175,6 +196,9 @@ Example: optional example for the previous card
 
 ## Verification
 
-- `npm run typecheck`
+```bash
+npm run typecheck
+npm run web:build
+```
 
-Native-first verification is the target for this version. A web export was attempted, but the installed `expo-sqlite` package in this SDK currently fails web bundling in this workspace because of a missing wasm asset. Expo Go and native flows remain the intended first-release path.
+The browser export resolves `.web.ts` repository, database-bootstrap, preference, and file-reader implementations, so native-only SQLite and filesystem code are not included in the web bundle.
