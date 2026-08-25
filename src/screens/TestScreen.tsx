@@ -1,10 +1,11 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Text, View } from "react-native";
 
 import { DEFAULT_TEST_LENGTH } from "../constants/app";
 import { AppScreen } from "../components/AppScreen";
+import { DataErrorState } from "../components/DataErrorState";
 import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { PrimaryButton } from "../components/PrimaryButton";
@@ -28,6 +29,9 @@ export default function TestScreen({ deckId }: { deckId: string }) {
   const [writtenDraft, setWrittenDraft] = useState("");
   const [savedAttemptId, setSavedAttemptId] = useState<string | null>(null);
   const [resultsFinishedAt, setResultsFinishedAt] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saveRetryToken, setSaveRetryToken] = useState(0);
+  const persistenceStartedRef = useRef(false);
 
   useEffect(() => {
     if (!deckQuery.data) {
@@ -73,36 +77,57 @@ export default function TestScreen({ deckId }: { deckId: string }) {
       !deckQuery.data ||
       !testState.startedAt ||
       savedAttemptId ||
-      saveAttemptMutation.isPending
+      saveAttemptMutation.isPending ||
+      persistenceStartedRef.current
     ) {
       return;
     }
 
+    persistenceStartedRef.current = true;
     const finishedAt = new Date().toISOString();
 
     async function persistAttempt(): Promise<void> {
-      const attemptId = await saveAttemptMutation.mutateAsync({
-        deck: {
-          id: deckQuery.data!.id,
-          title: deckQuery.data!.title,
-        },
-        questions: testState.questions,
-        answers,
-        startedAt: testState.startedAt!,
-        finishedAt,
-      });
+      try {
+        const attemptId = await saveAttemptMutation.mutateAsync({
+          deck: {
+            id: deckQuery.data!.id,
+            title: deckQuery.data!.title,
+          },
+          questions: testState.questions,
+          answers,
+          startedAt: testState.startedAt!,
+          finishedAt,
+        });
 
-      await Promise.all(
-        answers
-          .filter((answer) => typeof answer.isCorrect === "boolean")
-          .map((answer) => recordReview(answer.cardId, deckQuery.data!.id, answer.isCorrect ? "correct" : "incorrect")),
-      );
+        setSavedAttemptId(attemptId);
+        setResultsFinishedAt(finishedAt);
 
-      setSavedAttemptId(attemptId);
-      setResultsFinishedAt(finishedAt);
+        try {
+          await Promise.all(
+            answers
+              .filter((answer) => typeof answer.isCorrect === "boolean")
+              .map((answer) =>
+                recordReview(answer.cardId, deckQuery.data!.id, answer.isCorrect ? "correct" : "incorrect"),
+              ),
+          );
+          setSaveError(null);
+        } catch (error) {
+          setSaveError(
+            error instanceof Error
+              ? `The attempt was saved, but review scheduling was not fully updated: ${error.message}`
+              : "The attempt was saved, but review scheduling was not fully updated.",
+          );
+        }
 
-      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
-      queryClient.invalidateQueries({ queryKey: ["decks", deckId] });
+        void queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        void queryClient.invalidateQueries({ queryKey: ["decks", deckId] });
+      } catch (error) {
+        setSaveError(
+          error instanceof Error
+            ? error.message
+            : "This test attempt could not be saved. Check your connection and try again.",
+        );
+      }
     }
 
     void persistAttempt();
@@ -112,6 +137,7 @@ export default function TestScreen({ deckId }: { deckId: string }) {
     deckQuery.data,
     queryClient,
     saveAttemptMutation,
+    saveRetryToken,
     savedAttemptId,
     testState.phase,
     testState.questions,
@@ -133,6 +159,8 @@ export default function TestScreen({ deckId }: { deckId: string }) {
 
     setSavedAttemptId(null);
     setResultsFinishedAt(null);
+    setSaveError(null);
+    persistenceStartedRef.current = false;
     testState.start(questions);
   }
 
@@ -142,6 +170,10 @@ export default function TestScreen({ deckId }: { deckId: string }) {
 
   if (deckQuery.isLoading) {
     return <LoadingState message="Preparing test mode..." />;
+  }
+
+  if (deckQuery.isError) {
+    return <DataErrorState onRetry={() => void deckQuery.refetch()} />;
   }
 
   if (!deckQuery.data) {
@@ -230,12 +262,25 @@ export default function TestScreen({ deckId }: { deckId: string }) {
         </View>
 
         <SectionCard className="gap-3">
-          <Text className="text-lg font-semibold text-ink-900 dark:text-white">Saved locally</Text>
+          <Text className="text-lg font-semibold text-ink-900 dark:text-white">Saved to your library</Text>
           <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
-            {saveAttemptMutation.isPending
+            {saveError
+              ? saveError
+              : saveAttemptMutation.isPending
               ? "Saving your attempt and updating review stats..."
               : `Attempt ${savedAttemptId ? "saved" : "processed"}${resultsFinishedAt ? ` on ${resultsFinishedAt}` : ""}.`}
           </Text>
+          {saveError && !savedAttemptId ? (
+            <PrimaryButton
+              label="Retry saving"
+              variant="secondary"
+              onPress={() => {
+                persistenceStartedRef.current = false;
+                setSaveError(null);
+                setSaveRetryToken((value) => value + 1);
+              }}
+            />
+          ) : null}
         </SectionCard>
 
         <View className="gap-3">
@@ -280,6 +325,8 @@ export default function TestScreen({ deckId }: { deckId: string }) {
               testState.reset();
               setSavedAttemptId(null);
               setResultsFinishedAt(null);
+              setSaveError(null);
+              persistenceStartedRef.current = false;
             }}
           />
           <PrimaryButton className="flex-1" label="Back to set" onPress={() => router.replace(`/sets/${deckId}`)} />

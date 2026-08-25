@@ -1,16 +1,19 @@
 import "../global.css";
 
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack } from "expo-router";
-import { useState } from "react";
-import { Text, View } from "react-native";
+import { useEffect, useState } from "react";
+import { Alert, Text, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 
 import { AppScreen } from "../src/components/AppScreen";
+import { AuthErrorState } from "../src/components/auth/AuthErrorState";
 import { LoadingState } from "../src/components/LoadingState";
 import { PrimaryButton } from "../src/components/PrimaryButton";
 import { ThemeProvider, useAppTheme } from "../src/components/ThemeProvider";
 import { useAppBootstrap } from "../src/hooks/useAppBootstrap";
+import { AuthProvider, useAuth } from "../src/services/auth/AuthProvider";
+import SignInScreen from "./sign-in";
 
 function RootNavigator() {
   const theme = useAppTheme();
@@ -25,6 +28,7 @@ function RootNavigator() {
         }}
       >
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="sign-in" />
         <Stack.Screen name="sets/new" />
         <Stack.Screen name="sets/[setId]/index" />
         <Stack.Screen name="sets/[setId]/edit" />
@@ -36,8 +40,57 @@ function RootNavigator() {
   );
 }
 
+function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
+  const { dismissError, error, isLoading, retrySession, session, user } = useAuth();
+  const userId = user?.id ?? null;
+  const [preparedUserId, setPreparedUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    queryClient.clear();
+    setPreparedUserId(userId);
+  }, [queryClient, userId]);
+
+  if (isLoading || (userId && preparedUserId !== userId)) {
+    return <LoadingState message="Restoring your secure session..." />;
+  }
+
+  if (error && error.kind !== "invalid-session") {
+    return (
+      <AuthErrorState
+        error={error}
+        onRetry={error.kind === "configuration" ? undefined : () => void retrySession()}
+        onDismiss={session ? dismissError : undefined}
+      />
+    );
+  }
+
+  if (!session) {
+    return <SignInScreen />;
+  }
+
+  return <RootNavigator />;
+}
+
 export default function RootLayout() {
-  const [queryClient] = useState(() => new QueryClient());
+  const [queryClient] = useState(
+    () =>
+      new QueryClient({
+        defaultOptions: {
+          queries: { retry: 1 },
+          mutations: { retry: false },
+        },
+        mutationCache: new MutationCache({
+          onError: (error) => {
+            Alert.alert(
+              "Changes were not saved",
+              error instanceof Error
+                ? error.message
+                : "Memoraid could not reach your study library. Check your connection and try again.",
+            );
+          },
+        }),
+      }),
+  );
   const bootstrap = useAppBootstrap();
 
   if (!bootstrap.isReady && !bootstrap.error) {
@@ -60,7 +113,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider initialPreference={bootstrap.themePreference}>
       <QueryClientProvider client={queryClient}>
-        <RootNavigator />
+        <AuthProvider>
+          <SessionBoundary queryClient={queryClient} />
+        </AuthProvider>
       </QueryClientProvider>
     </ThemeProvider>
   );

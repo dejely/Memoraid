@@ -1,12 +1,17 @@
 node_modules
 .expo
+.playwright-cli
 dist
 web-build
 npm-debug.*
 yarn-debug.*
 yarn-error.*
 .DS_Store
+.env*
+!.env.example
 android
 *.keystore
 *.jks
 android/app/release.keystore
+.vercel
+.env.local

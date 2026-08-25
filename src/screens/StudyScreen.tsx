@@ -1,9 +1,10 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Animated, Pressable, Text, View, PanResponder } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
+import { DataErrorState } from "../components/DataErrorState";
 import { EmptyState } from "../components/EmptyState";
 import { FlashcardPanel } from "../components/FlashcardPanel";
 import { LoadingState } from "../components/LoadingState";
@@ -21,6 +22,7 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
   const sessionQuery = useFlashcardSession(deckId);
   const recordReviewMutation = useRecordReviewMutation(deckId);
   const queryClient = useQueryClient();
+  const [sessionSaveError, setSessionSaveError] = useState<string | null>(null);
 
   const translateX = useRef(new Animated.Value(0)).current;
   const flipAnimation = useRef(new Animated.Value(0)).current;
@@ -70,7 +72,15 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
         completedAt: store.completedAt,
         sessionId: store.sessionId,
         startedAt: store.startedAt,
-      });
+      })
+        .then(() => setSessionSaveError(null))
+        .catch((error: unknown) => {
+          setSessionSaveError(
+            error instanceof Error
+              ? error.message
+              : "Your latest flashcard position could not be saved. Check your connection and continue when ready.",
+          );
+        });
     }, 250);
 
     return () => clearTimeout(timeoutId);
@@ -193,6 +203,17 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
     return <LoadingState message="Loading flashcards and your last session..." />;
   }
 
+  if (deckQuery.isError || sessionQuery.isError) {
+    return (
+      <DataErrorState
+        onRetry={() => {
+          void deckQuery.refetch();
+          void sessionQuery.refetch();
+        }}
+      />
+    );
+  }
+
   if (!deckQuery.data || !currentCard) {
     return (
       <AppScreen>
@@ -212,7 +233,7 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
       <ScreenHeader
         eyebrow="Flashcard mode"
         title={deckQuery.data.title}
-        subtitle="Tap to flip, swipe to move, and mark cards easy or hard to update local review stats."
+        subtitle="Tap to flip, swipe to move, and mark cards easy or hard to update your review stats."
         trailing={<PrimaryButton label="Back" variant="secondary" onPress={() => router.back()} />}
       />
 
@@ -232,6 +253,15 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
           ) : null}
         </View>
       </SectionCard>
+
+      {sessionSaveError ? (
+        <SectionCard className="gap-2 border border-rose-200 dark:border-rose-500/40">
+          <Text className="text-sm font-semibold text-rose-500">Session progress is not saved yet</Text>
+          <Text accessibilityRole="alert" className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+            {sessionSaveError}
+          </Text>
+        </SectionCard>
+      ) : null}
 
       <Animated.View
         {...panResponder.panHandlers}
