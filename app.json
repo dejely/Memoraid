@@ -4,7 +4,7 @@
     "slug": "memoraid",
     "scheme": "memoraid",
     "version": "1.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "userInterfaceStyle": "automatic",
     "web": {
       "output": "single",
