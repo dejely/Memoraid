@@ -1,3 +1,5 @@
+import { MathContent } from "../components/math/MathContent";
+import { StudyRewards } from "../components/StudyRewards";
 import { router } from "expo-router";
 import { Platform, Text, View } from "react-native";
 
@@ -62,6 +64,7 @@ export default function DashboardScreen() {
       />
 
       <CloudMigrationCard />
+      <StudyRewards />
 
       <SectionCard className="gap-5 bg-ink-900">
         <View className="gap-2">
@@ -119,7 +122,7 @@ export default function DashboardScreen() {
           dashboard.dueCards.map((card) => (
             <SectionCard key={card.cardId} className="gap-2">
               <Text className="text-sm font-semibold uppercase tracking-[1.5px] text-amber-700 dark:text-amber-200">{card.deckTitle}</Text>
-              <Text className="text-xl font-semibold text-ink-900 dark:text-white">{card.term}</Text>
+              <MathContent className="text-xl font-semibold text-ink-900 dark:text-white">{card.term}</MathContent>
               <Text className="text-sm text-ink-600 dark:text-ink-200">Due {formatDateTime(card.dueAt)}</Text>
             </SectionCard>
           ))
