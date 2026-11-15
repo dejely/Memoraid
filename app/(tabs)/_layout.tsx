@@ -8,6 +8,8 @@ function getTabBarIcon(routeName: string, focused: boolean): keyof typeof Ionico
     return focused ? "grid" : "grid-outline";
   }
 
+  if (routeName === "settings") return focused ? "settings" : "settings-outline";
+
   if (routeName === "import") {
     return focused ? "document-text" : "document-text-outline";
   }
@@ -47,6 +49,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="index" options={{ title: "Dashboard" }} />
       <Tabs.Screen name="import" options={{ title: "Import" }} />
       <Tabs.Screen name="history" options={{ title: "History" }} />
+      <Tabs.Screen name="settings" options={{ title: "Settings" }} />
     </Tabs>
   );
 }

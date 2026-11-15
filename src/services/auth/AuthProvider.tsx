@@ -12,6 +12,7 @@ import {
 } from "react";
 import { AppState, Platform } from "react-native";
 
+import { clearWebAiCredentials } from "../secure/ai-storage";
 import { MemoraidAuthError, toMemoraidAuthError } from "./auth-errors";
 import {
   clearLocalSession,
@@ -150,7 +151,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
       };
     }
 
-    const { data: authListener } = client.auth.onAuthStateChange((_event, session) => {
+    const { data: authListener } = client.auth.onAuthStateChange((event, session) => {
+      if (event === "SIGNED_OUT") void clearWebAiCredentials().catch(() => {});
       if (mountedRef.current) {
         setState({ session, isLoading: false, error: null });
       }
