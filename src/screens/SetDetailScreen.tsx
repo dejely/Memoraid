@@ -1,3 +1,4 @@
+import { MathContent } from "../components/math/MathContent";
 import { router } from "expo-router";
 import { Alert, Text, View } from "react-native";
 
@@ -99,9 +100,9 @@ export default function SetDetailScreen({ deckId }: { deckId: string }) {
                 </View>
               ) : null}
             </View>
-            <Text className="text-xl font-semibold text-ink-900 dark:text-white">{card.term}</Text>
-            <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{card.definition}</Text>
-            {card.example ? <Text className="text-sm leading-6 text-ink-500 dark:text-ink-300">Example: {card.example}</Text> : null}
+            <MathContent className="text-xl font-semibold text-ink-900 dark:text-white">{card.term}</MathContent>
+            <MathContent className="text-sm leading-6 text-ink-600 dark:text-ink-200">{card.definition}</MathContent>
+            {card.example ? <MathContent className="text-sm leading-6 text-ink-500 dark:text-ink-300">{`Example: ${card.example}`}</MathContent> : null}
           </SectionCard>
         ))}
       </View>
