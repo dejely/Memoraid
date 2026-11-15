@@ -1,3 +1,7 @@
+import {
+  DEFAULT_FREE_OPENROUTER_MODEL,
+  isFreeOpenRouterModel,
+} from "../../../supabase/functions/_shared/openrouter-policy";
 export type AiProvider = "gemini" | "openrouter";
 export interface AiSettings {
   geminiModel: string;
@@ -10,7 +14,7 @@ export interface AiCredentials {
 }
 export const DEFAULT_AI_SETTINGS: AiSettings = {
   geminiModel: "gemini-3.5-flash-lite",
-  openrouterModel: "anthropic/claude-sonnet-4.5",
+  openrouterModel: DEFAULT_FREE_OPENROUTER_MODEL,
   fallbackEnabled: true,
 };
 export const EMPTY_CREDENTIALS: AiCredentials = { gemini: "", openrouter: "" };
@@ -34,7 +38,7 @@ export function decodeAiConfiguration(raw: string | null): { settings: AiSetting
           ? parsed.settings.geminiModel
           : DEFAULT_AI_SETTINGS.geminiModel,
       openrouterModel:
-        typeof parsed?.settings?.openrouterModel === "string"
+        typeof parsed?.settings?.openrouterModel === "string" && isFreeOpenRouterModel(parsed.settings.openrouterModel)
           ? parsed.settings.openrouterModel
           : DEFAULT_AI_SETTINGS.openrouterModel,
       fallbackEnabled: typeof parsed?.settings?.fallbackEnabled === "boolean" ? parsed.settings.fallbackEnabled : true,

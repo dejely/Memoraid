@@ -1,3 +1,4 @@
+import { FREE_OPENROUTER_MODEL_ERROR, isFreeOpenRouterModel } from "../../supabase/functions/_shared/openrouter-policy";
 import { useEffect, useState } from "react";
 import { Platform, Switch, Text, TextInput, View } from "react-native";
 import { AppScreen } from "../components/AppScreen";
@@ -40,6 +41,10 @@ export default function SettingsScreen() {
   }, [user?.id]);
   async function save() {
     if (!user) return;
+    if (!isFreeOpenRouterModel(settings.openrouterModel)) {
+      setMessage(FREE_OPENROUTER_MODEL_ERROR);
+      return;
+    }
     setBusy(true);
     try {
       await saveAiConfiguration(user.id, settings, {
@@ -63,7 +68,9 @@ export default function SettingsScreen() {
         { operation: "testConnection", provider, settings, credentials },
         controller.signal,
       );
-      setMessage(`${provider}: connected to ${result.model}. This test may incur a small provider charge.`);
+      setMessage(
+        `${provider}: connected to ${result.model}.${provider === "openrouter" ? " Free model; usage limits apply." : " Gemini usage charges may apply."}`,
+      );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Connection failed.");
     } finally {
@@ -77,7 +84,8 @@ export default function SettingsScreen() {
       <SectionCard className="gap-3">
         <Text className="text-base leading-6 text-ink-900 dark:text-white">
           Enter your own API keys. Recognition sends your drawing and credentials through Memoraid’s authenticated relay
-          to the selected provider. Keys are never saved on the server. Provider charges may apply.
+          to the selected provider. Keys are never saved on the server. OpenRouter uses free models only; Gemini usage
+          charges may apply.
         </Text>
         <Text className="text-sm text-ink-600 dark:text-ink-200">
           {Platform.OS === "web"
@@ -89,7 +97,7 @@ export default function SettingsScreen() {
       {(["gemini", "openrouter"] as const).map((provider) => (
         <SectionCard key={provider} className="gap-3">
           <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-            {provider === "gemini" ? "Gemini · primary" : "OpenRouter · fallback"}
+            {provider === "gemini" ? "Gemini · primary" : "OpenRouter · free models only"}
           </Text>
           <TextInput
             accessibilityLabel={`${provider} API key`}
@@ -112,6 +120,12 @@ export default function SettingsScreen() {
               }))
             }
           />
+          {provider === "openrouter" ? (
+            <Text className="text-sm text-ink-600 dark:text-ink-200">
+              Use openrouter/free to select a free model automatically, or an image-capable model ending in :free. Free
+              models have usage limits; paid models are blocked.
+            </Text>
+          ) : null}
           <View className="flex-row gap-2">
             <PrimaryButton
               label="Test connection"

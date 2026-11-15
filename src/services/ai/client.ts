@@ -1,3 +1,7 @@
+import {
+  FREE_OPENROUTER_MODEL_ERROR,
+  isFreeOpenRouterModel,
+} from "../../../supabase/functions/_shared/openrouter-policy";
 import { getSupabaseClient } from "../auth/supabase-client";
 import { loadAiConfiguration } from "../secure/ai-storage";
 import type { AiCredentials, AiProvider, AiSettings, RecognitionResult } from "./config";
@@ -12,6 +16,7 @@ export async function callAiRelay(
   },
   signal?: AbortSignal,
 ): Promise<RecognitionResult> {
+  if (!isFreeOpenRouterModel(input.settings.openrouterModel)) throw new Error(FREE_OPENROUTER_MODEL_ERROR);
   const client = getSupabaseClient();
   const { data, error: sessionError } = await client.auth.getSession();
   if (sessionError || !data.session) throw new Error("Sign in again before using recognition.");

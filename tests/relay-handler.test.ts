@@ -4,7 +4,7 @@ import { handleRecognitionRequest } from "../supabase/functions/study-ai/handler
 const body = {
   operation: "testConnection",
   provider: "gemini",
-  settings: { geminiModel: "test", openrouterModel: "test", fallbackEnabled: true },
+  settings: { geminiModel: "test", openrouterModel: "openrouter/free", fallbackEnabled: true },
   credentials: { gemini: "private-fixture", openrouter: "" },
 };
 const request = (value = JSON.stringify(body), token = "Bearer fixture") =>

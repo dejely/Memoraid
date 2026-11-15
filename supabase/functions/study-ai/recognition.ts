@@ -1,3 +1,4 @@
+import { FREE_OPENROUTER_MODEL_ERROR, isFreeOpenRouterModel } from "../_shared/openrouter-policy.ts";
 export type Provider = "gemini" | "openrouter";
 export type RelayInput = {
   operation: "recognizeMath" | "testConnection";
@@ -31,6 +32,7 @@ export function validateInput(value: unknown): RelayInput {
     )
       throw new RelayError("Invalid API key or model ID.");
   }
+  if (!isFreeOpenRouterModel(v.settings.openrouterModel)) throw new RelayError(FREE_OPENROUTER_MODEL_ERROR);
   if (v.operation === "testConnection" && v.provider !== "gemini" && v.provider !== "openrouter")
     throw new RelayError("Select a provider to test.");
   if (
@@ -66,6 +68,7 @@ export async function runRecognition(
   signal?: AbortSignal,
   report?: (metric: { provider: Provider; status: string; durationMs: number }) => void,
 ) {
+  if (!isFreeOpenRouterModel(input.settings.openrouterModel)) throw new RelayError(FREE_OPENROUTER_MODEL_ERROR);
   const configured = (["gemini", "openrouter"] as const).filter((p) => input.credentials[p].trim());
   const providers =
     input.operation === "testConnection"
@@ -109,6 +112,7 @@ export async function runRecognition(
             }
           : {
               model,
+              provider: { max_price: { prompt: 0, completion: 0, request: 0 } },
               max_tokens: 2048,
               messages: [
                 {
@@ -133,7 +137,7 @@ export async function runRecognition(
       });
       if (!response.ok) {
         report?.({ provider, status: String(response.status), durationMs: Date.now() - started });
-        lastError = `${provider}: ${response.status === 401 || response.status === 403 ? "check your API key and model access" : response.status === 429 ? "rate limit or quota reached" : response.status === 404 ? "model unavailable; update its ID in Settings" : "provider request failed"}.`;
+        lastError = `${provider}: ${response.status === 401 || response.status === 403 ? "check your API key and model access" : response.status === 402 && provider === "openrouter" ? "free access is unavailable for this key/account; check OpenRouter account limits" : response.status === 429 ? "rate limit or quota reached; retry later" : response.status === 404 ? "model unavailable; update its ID in Settings" : "provider request failed"}.`;
         continue;
       }
       const result = await response.json();

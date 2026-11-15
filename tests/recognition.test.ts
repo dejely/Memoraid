@@ -4,7 +4,7 @@ import { runRecognition, validateInput, type RelayInput } from "../supabase/func
 const input = (): RelayInput => ({
   operation: "recognizeMath",
   image: "data:image/png;base64,AAAA",
-  settings: { geminiModel: "gemini-test", openrouterModel: "anthropic/test", fallbackEnabled: true },
+  settings: { geminiModel: "gemini-test", openrouterModel: "openrouter/free", fallbackEnabled: true },
   credentials: { gemini: "test-gemini", openrouter: "test-openrouter" },
 });
 function ok(text = '{"latex":"x^2","unreadable":false}', gemini = true) {
