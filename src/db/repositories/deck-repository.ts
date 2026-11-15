@@ -1,3 +1,4 @@
+import { stripMath } from "../../services/math/grading";
 import { getDatabase } from "../client";
 import { mapCardRow, mapDeckSummaryRow } from "../mappers";
 import { nowIso } from "../../utils/date";
@@ -49,11 +50,13 @@ function normalizeDraft(input: DeckDraft): DeckDraft & { sourceType: SourceType 
     cards: input.cards
       .map((card) => ({
         id: card.id,
+        gradingMode: card.gradingMode ?? "self_review",
+        numericTolerance: card.numericTolerance ?? 0.001,
         term: card.term.trim(),
         definition: card.definition.trim(),
         example: card.example?.trim() ?? "",
       }))
-      .filter((card) => card.term && card.definition),
+      .filter((card) => stripMath(card.term) && stripMath(card.definition)),
   };
 }
 
@@ -88,24 +91,24 @@ export async function getDeckById(deckId: string): Promise<Deck | null> {
     return null;
   }
 
-  const cards = await database.getAllAsync<
-    {
-      id: string;
-      deck_id: string;
-      term: string;
-      definition: string;
-      example: string | null;
-      sort_order: number;
-      created_at: string;
-      updated_at: string;
-      ease_score: number | null;
-      easy_count: number | null;
-      hard_count: number | null;
-      last_reviewed_at: string | null;
-      due_at: string | null;
-      last_result: "easy" | "hard" | "correct" | "incorrect" | null;
-    }
-  >(
+  const cards = await database.getAllAsync<{
+    id: string;
+    deck_id: string;
+    term: string;
+    definition: string;
+    example: string | null;
+    grading_mode: import("../../services/math/grading").GradingMode;
+    numeric_tolerance: number;
+    sort_order: number;
+    created_at: string;
+    updated_at: string;
+    ease_score: number | null;
+    easy_count: number | null;
+    hard_count: number | null;
+    last_reviewed_at: string | null;
+    due_at: string | null;
+    last_result: "easy" | "hard" | "correct" | "incorrect" | null;
+  }>(
     `
       SELECT
         c.*,
@@ -149,10 +152,21 @@ export async function createDeck(input: DeckDraft): Promise<string> {
 
       await database.runAsync(
         `
-          INSERT INTO cards (id, deck_id, term, definition, example, sort_order, created_at, updated_at)
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+          INSERT INTO cards (id, deck_id, term, definition, example, sort_order, created_at, updated_at, grading_mode, numeric_tolerance)
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
-        [cardId, deckId, card.term, card.definition, card.example || null, index, timestamp, timestamp],
+        [
+          cardId,
+          deckId,
+          card.term,
+          card.definition,
+          card.example || null,
+          index,
+          timestamp,
+          timestamp,
+          card.gradingMode ?? "self_review",
+          card.numericTolerance ?? 0.001,
+        ],
       );
 
       await ensureReviewStatForCard(deckId, cardId, timestamp);
@@ -177,7 +191,9 @@ export async function updateDeck(deckId: string, input: DeckDraft): Promise<void
       [draft.title, draft.description, JSON.stringify(draft.tags), draft.sourceType, timestamp, deckId],
     );
 
-    const existingCards = await database.getAllAsync<{ id: string }>("SELECT id FROM cards WHERE deck_id = ?;", [deckId]);
+    const existingCards = await database.getAllAsync<{ id: string }>("SELECT id FROM cards WHERE deck_id = ?;", [
+      deckId,
+    ]);
     const existingCardIds = new Set(existingCards.map((row) => row.id));
     const nextCardIds = new Set<string>();
 
@@ -190,18 +206,39 @@ export async function updateDeck(deckId: string, input: DeckDraft): Promise<void
         await database.runAsync(
           `
             UPDATE cards
-            SET term = ?, definition = ?, example = ?, sort_order = ?, updated_at = ?
+            SET term = ?, definition = ?, example = ?, sort_order = ?, updated_at = ?, grading_mode = ?, numeric_tolerance = ?
             WHERE id = ? AND deck_id = ?;
           `,
-          [card.term, card.definition, card.example || null, index, timestamp, cardId, deckId],
+          [
+            card.term,
+            card.definition,
+            card.example || null,
+            index,
+            timestamp,
+            card.gradingMode ?? "self_review",
+            card.numericTolerance ?? 0.001,
+            cardId,
+            deckId,
+          ],
         );
       } else {
         await database.runAsync(
           `
-            INSERT INTO cards (id, deck_id, term, definition, example, sort_order, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?);
+            INSERT INTO cards (id, deck_id, term, definition, example, sort_order, created_at, updated_at, grading_mode, numeric_tolerance)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
           `,
-          [cardId, deckId, card.term, card.definition, card.example || null, index, timestamp, timestamp],
+          [
+            cardId,
+            deckId,
+            card.term,
+            card.definition,
+            card.example || null,
+            index,
+            timestamp,
+            timestamp,
+            card.gradingMode ?? "self_review",
+            card.numericTolerance ?? 0.001,
+          ],
         );
 
         await ensureReviewStatForCard(deckId, cardId, timestamp);

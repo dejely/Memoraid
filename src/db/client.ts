@@ -7,7 +7,7 @@ let databasePromise: Promise<SQLiteDatabase> | null = null;
 
 async function openDatabase(): Promise<SQLiteDatabase> {
   const database = await openDatabaseAsync("quiztography.db");
-  await database.execAsync("PRAGMA foreign_keys = ON;");
+  await database.execAsync("PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;");
 
   return database;
 }
@@ -33,8 +33,10 @@ export async function initializeDatabase(): Promise<void> {
         continue;
       }
 
-      await database.execAsync(migration);
-      await database.execAsync(`PRAGMA user_version = ${version};`);
+      await database.withTransactionAsync(async () => {
+        await database.execAsync(migration);
+        await database.execAsync(`PRAGMA user_version = ${version};`);
+      });
     }
   }
 

@@ -10,6 +10,7 @@ type UploadResult = {
   sessions: number;
   attempts: number;
   questions: number;
+  events: number;
 };
 
 type Row = Record<string, unknown>;
@@ -17,7 +18,7 @@ type Row = Record<string, unknown>;
 const PAGE_SIZE = 500;
 
 function migrationKey(userId: string): string {
-  return `memoraid.cloud-upload.${userId}`;
+  return `memoraid.cloud-upload.math-v1.${userId}`;
 }
 
 function parseArray(value: unknown): string[] {
@@ -98,18 +99,19 @@ export async function uploadNativeDataToCloud(userId: string): Promise<UploadRes
   }
 
   const database = await getDatabase();
-  const [decks, cards, sessions, reviews, attempts, questions] = await Promise.all([
+  const [decks, cards, sessions, reviews, attempts, questions, events] = await Promise.all([
     database.getAllAsync<Row>("SELECT * FROM decks ORDER BY created_at ASC;"),
     database.getAllAsync<Row>("SELECT * FROM cards ORDER BY created_at ASC;"),
     database.getAllAsync<Row>("SELECT * FROM sessions ORDER BY started_at ASC;"),
     database.getAllAsync<Row>("SELECT * FROM review_stats;"),
     database.getAllAsync<Row>("SELECT * FROM test_attempts ORDER BY started_at ASC;"),
     database.getAllAsync<Row>("SELECT * FROM test_questions ORDER BY created_at ASC;"),
+    database.getAllAsync<Row>("SELECT * FROM review_events ORDER BY happened_at ASC;"),
   ]);
 
   if (decks.length === 0) {
     await SecureStore.setItemAsync(migrationKey(userId), "complete");
-    return { decks: 0, cards: 0, reviews: 0, sessions: 0, attempts: 0, questions: 0 };
+    return { decks: 0, cards: 0, reviews: 0, sessions: 0, attempts: 0, questions: 0, events: 0 };
   }
 
   const cloudDeckIds = await readAllCloudDeckIds();
@@ -149,6 +151,16 @@ export async function uploadNativeDataToCloud(userId: string): Promise<UploadRes
   await insertMissingRows("review_stats", reviewRows, "user_id,card_id");
   await insertMissingRows("test_attempts", attemptRows, "user_id,id");
   await insertMissingRows("test_questions", questionRows, "user_id,id");
+  await insertMissingRows("review_events", events.map((row) => owned({ ...row, was_due: row.was_due === 1, was_weak: row.was_weak === 1 })), "user_id,id");
+  // Earlier uploads predate grading columns. Update only the new metadata.
+  for (const card of cards) {
+    const { error } = await client.from("cards").update({ grading_mode: card.grading_mode, numeric_tolerance: card.numeric_tolerance }).eq("user_id", userId).eq("id", card.id);
+    if (error) throw new Error("Card grading settings could not be uploaded. Retry the upload.");
+  }
+  for (const question of questions) {
+    const { error } = await client.from("test_questions").update({ grading_method: question.grading_method }).eq("user_id", userId).eq("id", question.id);
+    if (error) throw new Error("Answer grading details could not be uploaded. Retry the upload.");
+  }
   await SecureStore.setItemAsync(migrationKey(userId), "complete");
 
   return {
@@ -158,6 +170,7 @@ export async function uploadNativeDataToCloud(userId: string): Promise<UploadRes
     sessions: sessionRows.length,
     attempts: attemptRows.length,
     questions: questionRows.length,
+    events: events.length,
   };
 }
 
