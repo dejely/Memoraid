@@ -1,6 +1,9 @@
+import { AnswerInput } from "../components/math/AnswerInput";
+import { MathContent } from "../components/math/MathContent";
+import { stripMath, type GradingMode } from "../services/math/grading";
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Alert, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
 import { DataErrorState } from "../components/DataErrorState";
@@ -19,6 +22,8 @@ type EditableCard = {
   term: string;
   definition: string;
   example: string;
+  gradingMode: GradingMode;
+  numericTolerance: string;
 };
 
 function createBlankCard(): EditableCard {
@@ -27,6 +32,8 @@ function createBlankCard(): EditableCard {
     term: "",
     definition: "",
     example: "",
+    gradingMode: "self_review",
+    numericTolerance: "0.001",
   };
 }
 
@@ -36,6 +43,7 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
   const createDeckMutation = useCreateDeckMutation();
   const updateDeckMutation = useUpdateDeckMutation(deckId ?? "");
 
+  const [saveError, setSaveError] = useState("");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [tagsValue, setTagsValue] = useState("");
@@ -56,19 +64,19 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
         term: card.term,
         definition: card.definition,
         example: card.example ?? "",
+        gradingMode: card.gradingMode ?? "self_review",
+        numericTolerance: String(card.numericTolerance ?? 0.001),
       })),
     );
   }, [deckQuery.data]);
 
   const validCardCount = useMemo(
-    () => cards.filter((card) => card.term.trim() && card.definition.trim()).length,
+    () => cards.filter((card) => stripMath(card.term) && stripMath(card.definition)).length,
     [cards],
   );
 
   function updateCard(key: string, field: keyof EditableCard, value: string) {
-    setCards((currentCards) =>
-      currentCards.map((card) => (card.key === key ? { ...card, [field]: value } : card)),
-    );
+    setCards((currentCards) => currentCards.map((card) => (card.key === key ? { ...card, [field]: value } : card)));
   }
 
   function removeCard(key: string) {
@@ -81,15 +89,29 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
 
   async function handleSave(): Promise<void> {
     if (!title.trim()) {
-      Alert.alert("Title required", "Add a title for this study set.");
+      setSaveError("Add a title for this study set.");
       return;
     }
 
     if (validCardCount === 0) {
-      Alert.alert("Cards required", "Add at least one term and definition before saving.");
+      setSaveError("Add at least one term and definition before saving.");
       return;
     }
 
+    if (
+      cards.some(
+        (card) =>
+          card.gradingMode === "numeric" &&
+          (!card.numericTolerance.trim() ||
+            !Number.isFinite(Number(card.numericTolerance)) ||
+            Number(card.numericTolerance) < 0),
+      )
+    ) {
+      setSaveError("Enter a nonnegative numeric tolerance.");
+      return;
+    }
+
+    setSaveError("");
     const payload = {
       title: title.trim(),
       description: description.trim(),
@@ -99,6 +121,11 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
         term: card.term,
         definition: card.definition,
         example: card.example,
+        gradingMode: card.gradingMode,
+        numericTolerance:
+          Number.isFinite(Number(card.numericTolerance)) && Number(card.numericTolerance) >= 0
+            ? Number(card.numericTolerance)
+            : 0.001,
       })),
     };
 
@@ -129,21 +156,39 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
       />
 
       <FormField label="Title" value={title} onChangeText={setTitle} placeholder="Modern European History" />
-      <FormField label="Description" value={description} onChangeText={setDescription} placeholder="What this set covers" multiline />
-      <FormField label="Tags" value={tagsValue} onChangeText={setTagsValue} placeholder="midterm, lecture 5, memorization" />
+      <FormField
+        label="Description"
+        value={description}
+        onChangeText={setDescription}
+        placeholder="What this set covers"
+        multiline
+      />
+      <FormField
+        label="Tags"
+        value={tagsValue}
+        onChangeText={setTagsValue}
+        placeholder="midterm, lecture 5, memorization"
+      />
 
       <SectionCard className="gap-4">
         <View className="flex-row items-center justify-between">
           <Text className="text-lg font-semibold text-ink-900 dark:text-white">Cards</Text>
           <View className="rounded-full bg-sea-50 px-3 py-2 dark:bg-sea-800/50">
-            <Text className="text-xs font-semibold uppercase tracking-[1.5px] text-sea-800 dark:text-sea-100">{validCardCount} ready</Text>
+            <Text className="text-xs font-semibold uppercase tracking-[1.5px] text-sea-800 dark:text-sea-100">
+              {validCardCount} ready
+            </Text>
           </View>
         </View>
 
         {cards.map((card, index) => (
-          <SectionCard key={card.key} className="gap-3 border border-ink-100 bg-ink-50 dark:border-ink-700 dark:bg-ink-900/60">
+          <SectionCard
+            key={card.key}
+            className="gap-3 border border-ink-100 bg-ink-50 dark:border-ink-700 dark:bg-ink-900/60"
+          >
             <View className="flex-row items-center justify-between">
-              <Text className="text-sm font-semibold uppercase tracking-[1.5px] text-ink-600 dark:text-ink-200">Card {index + 1}</Text>
+              <Text className="text-sm font-semibold uppercase tracking-[1.5px] text-ink-600 dark:text-ink-200">
+                Card {index + 1}
+              </Text>
               <PrimaryButton
                 label="Remove"
                 variant="ghost"
@@ -151,32 +196,71 @@ export default function SetFormScreen({ deckId }: { deckId?: string }) {
                 onPress={() => removeCard(card.key)}
               />
             </View>
-            <FormField label="Term" value={card.term} onChangeText={(value) => updateCard(card.key, "term", value)} placeholder="Thermodynamics" />
-            <FormField
-              label="Definition"
+            <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">Term / question</Text>
+            <AnswerInput
+              value={card.term}
+              onChangeText={(value) => updateCard(card.key, "term", value)}
+              allowHandwriting={false}
+            />
+            <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">Definition / expected answer</Text>
+            <AnswerInput
               value={card.definition}
               onChangeText={(value) => updateCard(card.key, "definition", value)}
-              placeholder="The study of heat, energy, and work"
-              multiline
+              allowHandwriting={false}
             />
-            <FormField
-              label="Example"
+            <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">Example</Text>
+            <AnswerInput
               value={card.example}
               onChangeText={(value) => updateCard(card.key, "example", value)}
-              placeholder="Optional memory cue"
-              multiline
+              allowHandwriting={false}
             />
+            <MathContent className="text-ink-900 dark:text-white">{card.definition}</MathContent>
+            <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">Written-answer grading</Text>
+            <View className="flex-row flex-wrap gap-2">
+              {(["self_review", "numeric", "expression"] as const).map((mode) => (
+                <PrimaryButton
+                  key={mode}
+                  label={mode === "self_review" ? "Self-review" : mode === "numeric" ? "Numeric" : "Expression"}
+                  variant={card.gradingMode === mode ? "primary" : "secondary"}
+                  onPress={() => updateCard(card.key, "gradingMode", mode)}
+                />
+              ))}
+            </View>
+            {card.gradingMode === "numeric" ? (
+              <FormField
+                label="Absolute tolerance"
+                value={card.numericTolerance}
+                onChangeText={(value) => updateCard(card.key, "numericTolerance", value)}
+              />
+            ) : null}
+            <Text className="text-xs text-ink-600 dark:text-ink-200">
+              Unsupported or indeterminate math falls back to self-review. Use self-review when a particular formula
+              form is required.
+            </Text>
           </SectionCard>
         ))}
 
-        <PrimaryButton label="Add another card" variant="secondary" onPress={() => setCards((currentCards) => [...currentCards, createBlankCard()])} />
+        <PrimaryButton
+          label="Add another card"
+          variant="secondary"
+          onPress={() => setCards((currentCards) => [...currentCards, createBlankCard()])}
+        />
       </SectionCard>
 
+      {saveError ? (
+        <Text accessibilityRole="alert" className="text-rose-500">
+          {saveError}
+        </Text>
+      ) : null}
       <PrimaryButton
-      label={isEditing ? "Save changes" : "Create set"}
-      loading={createDeckMutation.isPending || updateDeckMutation.isPending}
-      onPress={() => void handleSave().catch(() => {})}
-    />
+        label={isEditing ? "Save changes" : "Create set"}
+        loading={createDeckMutation.isPending || updateDeckMutation.isPending}
+        onPress={() =>
+          void handleSave().catch(() =>
+            setSaveError("Your set could not be saved. Check your connection and try again."),
+          )
+        }
+      />
     </AppScreen>
   );
 }

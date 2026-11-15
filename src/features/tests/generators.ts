@@ -48,6 +48,8 @@ function buildWrittenQuestion(card: StudyCard): RuntimeTestQuestion {
     id: createId("question"),
     cardId: card.id,
     questionType: "written",
+    gradingMode: card.gradingMode ?? "self_review",
+    numericTolerance: card.numericTolerance ?? 0.001,
     prompt: `Write the definition for "${card.term}".`,
     correctAnswer: card.definition,
     explanation: card.example ?? `Expected answer: ${card.definition}`,

@@ -1,3 +1,5 @@
+import { stripMath } from "../services/math/grading";
+import { MathContent } from "../components/math/MathContent";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -76,7 +78,6 @@ export default function TestScreen({ deckId }: { deckId: string }) {
       testState.phase !== "results" ||
       !deckQuery.data ||
       !testState.startedAt ||
-      savedAttemptId ||
       saveAttemptMutation.isPending ||
       persistenceStartedRef.current
     ) {
@@ -84,32 +85,39 @@ export default function TestScreen({ deckId }: { deckId: string }) {
     }
 
     persistenceStartedRef.current = true;
-    const finishedAt = new Date().toISOString();
+    const finishedAt = resultsFinishedAt ?? new Date().toISOString();
 
     async function persistAttempt(): Promise<void> {
       try {
-        const attemptId = await saveAttemptMutation.mutateAsync({
-          deck: {
-            id: deckQuery.data!.id,
-            title: deckQuery.data!.title,
-          },
-          questions: testState.questions,
-          answers,
-          startedAt: testState.startedAt!,
-          finishedAt,
-        });
+        const attemptId =
+          savedAttemptId ??
+          (await saveAttemptMutation.mutateAsync({
+            deck: {
+              id: deckQuery.data!.id,
+              title: deckQuery.data!.title,
+            },
+            questions: testState.questions,
+            answers,
+            startedAt: testState.startedAt!,
+            finishedAt,
+          }));
 
         setSavedAttemptId(attemptId);
         setResultsFinishedAt(finishedAt);
 
         try {
-          await Promise.all(
-            answers
-              .filter((answer) => typeof answer.isCorrect === "boolean")
-              .map((answer) =>
-                recordReview(answer.cardId, deckQuery.data!.id, answer.isCorrect ? "correct" : "incorrect"),
-              ),
-          );
+          for (const question of testState.questions) {
+            const answer = testState.answers[question.id];
+            if (answer && typeof answer.isCorrect === "boolean") {
+              await recordReview(
+                answer.cardId,
+                deckQuery.data!.id,
+                answer.isCorrect ? "correct" : "incorrect",
+                `test:${answer.questionId}`,
+                answer.gradingMethod ?? "self_review",
+              );
+            }
+          }
           setSaveError(null);
         } catch (error) {
           setSaveError(
@@ -138,6 +146,7 @@ export default function TestScreen({ deckId }: { deckId: string }) {
     queryClient,
     saveAttemptMutation,
     saveRetryToken,
+    resultsFinishedAt,
     savedAttemptId,
     testState.phase,
     testState.questions,
@@ -208,7 +217,7 @@ export default function TestScreen({ deckId }: { deckId: string }) {
           <Text className="text-xs font-medium uppercase tracking-[2px] text-white/60">Test builder</Text>
           <Text className="text-3xl font-bold text-white">{deckQuery.data.cardCount} cards ready</Text>
           <Text className="text-sm leading-6 text-white/75">
-            Objective questions are auto-graded. Written answers reveal the expected answer and let you self-mark the result.
+            Objective questions auto-grade. Written answers use the card’s grading rule, with self-review when needed.
           </Text>
         </SectionCard>
 
@@ -267,10 +276,10 @@ export default function TestScreen({ deckId }: { deckId: string }) {
             {saveError
               ? saveError
               : saveAttemptMutation.isPending
-              ? "Saving your attempt and updating review stats..."
-              : `Attempt ${savedAttemptId ? "saved" : "processed"}${resultsFinishedAt ? ` on ${resultsFinishedAt}` : ""}.`}
+                ? "Saving your attempt and updating review stats..."
+                : `Attempt ${savedAttemptId ? "saved" : "processed"}${resultsFinishedAt ? ` on ${resultsFinishedAt}` : ""}.`}
           </Text>
-          {saveError && !savedAttemptId ? (
+          {saveError ? (
             <PrimaryButton
               label="Retry saving"
               variant="secondary"
@@ -290,8 +299,10 @@ export default function TestScreen({ deckId }: { deckId: string }) {
           ) : (
             weakCards.map((card) => (
               <SectionCard key={card.id} className="gap-2">
-                <Text className="text-lg font-semibold text-ink-900 dark:text-white">{card.term}</Text>
-                <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{card.definition}</Text>
+                <MathContent className="text-lg font-semibold text-ink-900 dark:text-white">{card.term}</MathContent>
+                <MathContent className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+                  {card.definition}
+                </MathContent>
               </SectionCard>
             ))
           )}
@@ -307,10 +318,12 @@ export default function TestScreen({ deckId }: { deckId: string }) {
                 <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">
                   {question.questionType.replace("_", " ")}
                 </Text>
-                <Text className="text-lg font-semibold text-ink-900 dark:text-white">{question.prompt}</Text>
-                <Text className="text-sm text-ink-600 dark:text-ink-200">Your answer: {answer?.selectedAnswer || "No answer"}</Text>
-                <Text className="text-sm text-ink-900 dark:text-white">Correct answer: {question.correctAnswer}</Text>
-                <Text className="text-sm text-ink-500 dark:text-ink-300">{question.explanation}</Text>
+                <MathContent className="text-lg font-semibold text-ink-900 dark:text-white">
+                  {question.prompt}
+                </MathContent>
+                <MathContent className="text-sm text-ink-600 dark:text-ink-200">{`Your answer: ${answer?.selectedAnswer || "No answer"}`}</MathContent>
+                <MathContent className="text-sm text-ink-900 dark:text-white">{`Correct answer: ${question.correctAnswer}`}</MathContent>
+                <MathContent className="text-sm text-ink-500 dark:text-ink-300">{question.explanation}</MathContent>
               </SectionCard>
             );
           })}
@@ -342,11 +355,15 @@ export default function TestScreen({ deckId }: { deckId: string }) {
       <ScreenHeader
         eyebrow="Test mode"
         title={deckQuery.data.title}
-        subtitle="Objective questions auto-grade immediately. Written questions reveal the expected answer before you score yourself."
+        subtitle="Use text, the math keyboard, or handwriting. Check recognized equations before submitting."
       />
 
       <SectionCard className="gap-4">
-        <ProgressBar current={testState.currentIndex + 1} total={testState.questions.length} label="Question progress" />
+        <ProgressBar
+          current={testState.currentIndex + 1}
+          total={testState.questions.length}
+          label="Question progress"
+        />
       </SectionCard>
 
       <QuestionPanel
@@ -358,12 +375,13 @@ export default function TestScreen({ deckId }: { deckId: string }) {
             : (value) => handleObjectiveAnswer(currentQuestion, value)
         }
         onChangeText={currentQuestion.questionType === "written" ? setWrittenDraft : undefined}
-        answerLocked={answerLocked}
+        answerLocked={Boolean(currentAnswer)}
       />
 
       {currentQuestion.questionType === "written" && !currentAnswer ? (
         <PrimaryButton
-          label="Reveal answer"
+          label="Submit answer"
+          disabled={!stripMath(writtenDraft)}
           onPress={() => testState.submitWrittenDraft(currentQuestion, writtenDraft)}
         />
       ) : null}
@@ -371,7 +389,9 @@ export default function TestScreen({ deckId }: { deckId: string }) {
       {currentQuestion.questionType === "written" && currentAnswer && !currentAnswer.reviewed ? (
         <SectionCard className="gap-4">
           <Text className="text-lg font-semibold text-ink-900 dark:text-white">Expected answer</Text>
-          <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{currentQuestion.correctAnswer}</Text>
+          <MathContent className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+            {currentQuestion.correctAnswer}
+          </MathContent>
           <View className="flex-row gap-3">
             <PrimaryButton
               className="flex-1"
@@ -388,15 +408,18 @@ export default function TestScreen({ deckId }: { deckId: string }) {
         </SectionCard>
       ) : null}
 
-      {currentQuestion.questionType !== "written" && currentAnswer ? (
+      {currentAnswer?.reviewed ? (
         <SectionCard className="gap-3">
           <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-            {currentAnswer.isCorrect ? "Correct" : "Needs review"}
+            {currentAnswer.isCorrect ? "Correct" : "Needs review"} ·{" "}
+            {currentAnswer.gradingMethod === "automatic" ? "Automatically marked" : "Self-reviewed"}
           </Text>
           {!currentAnswer.isCorrect ? (
-            <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">Correct answer: {currentQuestion.correctAnswer}</Text>
+            <MathContent className="text-sm leading-6 text-ink-600 dark:text-ink-200">{`Correct answer: ${currentQuestion.correctAnswer}`}</MathContent>
           ) : null}
-          <Text className="text-sm leading-6 text-ink-500 dark:text-ink-300">{currentQuestion.explanation}</Text>
+          <MathContent className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+            {currentQuestion.explanation}
+          </MathContent>
         </SectionCard>
       ) : null}
 

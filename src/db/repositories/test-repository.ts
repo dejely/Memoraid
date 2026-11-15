@@ -1,12 +1,6 @@
 import { getDatabase } from "../client";
-import { mapAttemptRow } from "../mappers";
-import { createId } from "../../utils/ids";
-import type {
-  DeckSummary,
-  RuntimeTestAnswer,
-  RuntimeTestQuestion,
-  TestAttemptSummary,
-} from "../../types/models";
+import { mapAttemptRow, mapTestQuestionRow } from "../mappers";
+import type { DeckSummary, RuntimeTestAnswer, RuntimeTestQuestion, TestAttemptSummary } from "../../types/models";
 
 type SaveAttemptInput = {
   deck: Pick<DeckSummary, "id" | "title">;
@@ -46,20 +40,21 @@ export async function getRecentTestAttempts(limit = 20): Promise<TestAttemptSumm
 
 export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> {
   const database = await getDatabase();
-  const attemptId = createId("attempt");
+  const attemptId = `attempt:${input.startedAt}`;
   const answersByQuestionId = new Map(input.answers.map((answer) => [answer.questionId, answer]));
   const objectiveAnswers = input.answers.filter((answer) => answer.questionType !== "written");
   const objectiveCorrect = objectiveAnswers.filter((answer) => answer.isCorrect).length;
   const correctAnswers = input.answers.filter((answer) => answer.isCorrect).length;
   const writtenCount = input.answers.filter((answer) => answer.questionType === "written").length;
-  const weakCardCount = new Set(input.answers.filter((answer) => answer.isCorrect === false).map((answer) => answer.cardId)).size;
-  const scorePercent =
-    input.questions.length === 0 ? 0 : Math.round((correctAnswers / input.questions.length) * 100);
+  const weakCardCount = new Set(
+    input.answers.filter((answer) => answer.isCorrect === false).map((answer) => answer.cardId),
+  ).size;
+  const scorePercent = input.questions.length === 0 ? 0 : Math.round((correctAnswers / input.questions.length) * 100);
 
   await database.withTransactionAsync(async () => {
     await database.runAsync(
       `
-        INSERT INTO test_attempts (
+        INSERT OR REPLACE INTO test_attempts (
           id,
           deck_id,
           deck_title,
@@ -96,7 +91,7 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
 
       await database.runAsync(
         `
-          INSERT INTO test_questions (
+          INSERT OR REPLACE INTO test_questions (
             id,
             attempt_id,
             card_id,
@@ -107,9 +102,10 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
             options_json,
             is_correct,
             explanation,
-            created_at
+            created_at,
+            grading_method
           )
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);
         `,
         [
           question.id,
@@ -123,10 +119,21 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
           typeof answer?.isCorrect === "boolean" ? (answer.isCorrect ? 1 : 0) : null,
           question.explanation,
           input.finishedAt,
+          answer?.gradingMethod ?? "self_review",
         ],
       );
     }
   });
 
   return attemptId;
+}
+
+export async function getAttemptQuestions(attemptId: string) {
+  const rows = await (
+    await getDatabase()
+  ).getAllAsync<Parameters<typeof mapTestQuestionRow>[0]>(
+    "SELECT * FROM test_questions WHERE attempt_id = ? ORDER BY created_at,id",
+    [attemptId],
+  );
+  return rows.map(mapTestQuestionRow);
 }
