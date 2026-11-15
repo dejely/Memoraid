@@ -1,3 +1,4 @@
+import { MathContent } from "./math/MathContent";
 import { Animated, StyleSheet, Text, View } from "react-native";
 
 import type { StudyCard } from "../types/models";
@@ -34,7 +35,7 @@ export function FlashcardPanel({
         <SectionCard className="flex-1 justify-between rounded-[32px] bg-ink-900 px-5 py-6">
           <View className="gap-3">
             <Text className="text-xs font-medium uppercase tracking-[2px] text-white/60">Term</Text>
-            <Text className="text-3xl font-bold tracking-tight text-white">{card.term}</Text>
+            <MathContent className="text-3xl font-bold tracking-tight text-white" color="#ffffff">{card.term}</MathContent>
           </View>
           <Text className="text-sm leading-6 text-white/70">
             Tap to flip or use the flip button for a side-turn animation.
@@ -54,13 +55,13 @@ export function FlashcardPanel({
         <SectionCard className="flex-1 justify-between rounded-[32px] bg-ink-900 px-5 py-6">
           <View className="gap-3">
             <Text className="text-xs font-medium uppercase tracking-[2px] text-white/60">Definition</Text>
-            <Text className="text-3xl font-bold tracking-tight text-white">{card.definition}</Text>
+            <MathContent className="text-3xl font-bold tracking-tight text-white" color="#ffffff">{card.definition}</MathContent>
           </View>
 
           {card.example ? (
             <View className="rounded-3xl bg-white/10 p-4">
               <Text className="text-xs font-medium uppercase tracking-[1.5px] text-white/60">Example</Text>
-              <Text className="mt-2 text-sm leading-6 text-white/90">{card.example}</Text>
+              <MathContent className="mt-2 text-sm leading-6 text-white/90" color="#ffffff">{card.example}</MathContent>
             </View>
           ) : (
             <Text className="text-sm leading-6 text-white/70">Swipe left or right to move through the stack.</Text>

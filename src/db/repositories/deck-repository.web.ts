@@ -1,3 +1,4 @@
+import { stripMath } from "../../services/math/grading";
 import type { Deck, DeckDraft, DeckSummary, ReviewStats, SourceType } from "../../types/models";
 import { nowIso } from "../../utils/date";
 import { createId } from "../../utils/ids";
@@ -15,6 +16,8 @@ type DeckRow = {
 };
 
 type CardRow = {
+  grading_mode: import("../../services/math/grading").GradingMode;
+  numeric_tolerance: number;
   id: string;
   deck_id: string;
   term: string;
@@ -45,11 +48,13 @@ function normalizeDraft(input: DeckDraft): DeckDraft & { sourceType: SourceType 
     cards: input.cards
       .map((card) => ({
         id: card.id,
+        gradingMode: card.gradingMode ?? "self_review",
+        numericTolerance: card.numericTolerance ?? 0.001,
         term: card.term.trim(),
         definition: card.definition.trim(),
         example: card.example?.trim() ?? "",
       }))
-      .filter((card) => card.term && card.definition),
+      .filter((card) => stripMath(card.term) && stripMath(card.definition)),
   };
 }
 
@@ -108,7 +113,7 @@ export async function getDeckById(deckId: string): Promise<Deck | null> {
       .maybeSingle(),
     client
       .from("cards")
-      .select("id,deck_id,term,definition,example,sort_order,created_at,updated_at")
+      .select("id,deck_id,term,definition,example,sort_order,created_at,updated_at,grading_mode,numeric_tolerance")
       .eq("deck_id", deckId)
       .order("sort_order", { ascending: true })
       .order("created_at", { ascending: true }),
@@ -140,6 +145,8 @@ export async function getDeckById(deckId: string): Promise<Deck | null> {
       return {
         id: row.id,
         deckId: row.deck_id,
+        gradingMode: row.grading_mode,
+        numericTolerance: row.numeric_tolerance,
         term: row.term,
         definition: row.definition,
         example: row.example,
@@ -171,6 +178,8 @@ export async function createDeck(input: DeckDraft): Promise<string> {
   const cardRows = draft.cards.map((card, index) => ({
     id: createId("card"),
     deck_id: deckId,
+    grading_mode: card.gradingMode,
+    numeric_tolerance: card.numericTolerance,
     term: card.term,
     definition: card.definition,
     example: card.example || null,
@@ -248,6 +257,8 @@ export async function updateDeck(deckId: string, input: DeckDraft): Promise<void
       const updateResult = await client
         .from("cards")
         .update({
+          grading_mode: card.gradingMode,
+          numeric_tolerance: card.numericTolerance,
           term: card.term,
           definition: card.definition,
           example: card.example || null,
@@ -260,6 +271,8 @@ export async function updateDeck(deckId: string, input: DeckDraft): Promise<void
       insertRows.push({
         id: cardId,
         deck_id: deckId,
+        grading_mode: card.gradingMode,
+        numeric_tolerance: card.numericTolerance,
         term: card.term,
         definition: card.definition,
         example: card.example || null,
@@ -289,10 +302,14 @@ export async function updateDeck(deckId: string, input: DeckDraft): Promise<void
       );
       throwIfCloudError(reviewsResult.error, "Review scheduling could not be initialized");
     } catch (error) {
-      await client.from("cards").delete().eq("deck_id", deckId).in(
-        "id",
-        insertRows.map((card) => card.id),
-      );
+      await client
+        .from("cards")
+        .delete()
+        .eq("deck_id", deckId)
+        .in(
+          "id",
+          insertRows.map((card) => card.id),
+        );
       throw error;
     }
   }

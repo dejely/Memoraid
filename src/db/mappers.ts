@@ -59,6 +59,8 @@ export function mapCardRow(
     term: string;
     definition: string;
     example: string | null;
+    grading_mode?: import("../services/math/grading").GradingMode;
+    numeric_tolerance?: number;
     sort_order: number;
     created_at: string;
     updated_at: string;
@@ -76,6 +78,8 @@ export function mapCardRow(
     term: row.term,
     definition: row.definition,
     example: row.example,
+    gradingMode: row.grading_mode ?? "self_review",
+    numericTolerance: row.numeric_tolerance ?? 0.001,
     sortOrder: row.sort_order,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -165,12 +169,14 @@ export function mapTestQuestionRow(row: {
   is_correct: number | null;
   explanation: string | null;
   created_at: string;
+  grading_method?: import("../services/math/grading").GradingMethod;
 }): TestQuestionRecord {
   return {
     id: row.id,
     attemptId: row.attempt_id,
     cardId: row.card_id,
     questionType: row.question_type,
+    gradingMethod: row.grading_method ?? "self_review",
     prompt: row.prompt,
     correctAnswer: row.correct_answer,
     selectedAnswer: row.selected_answer,

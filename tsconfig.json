@@ -3,7 +3,9 @@
   "compilerOptions": {
     "strict": true,
     "types": [
-      "nativewind/types"
-    ]
+      "nativewind/types",
+      "node"
+    ],
+    "allowImportingTsExtensions": true
   }
 }

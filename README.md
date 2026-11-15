@@ -16,6 +16,8 @@ Memoraid is a Quizlet-style study app built with Expo for Android, iOS, and the 
 - expo-secure-store
 - expo-document-picker
 - expo-file-system
+- react-native-webview
+- MathLive and CortexJS Compute Engine
 
 ## Features
 
@@ -24,6 +26,11 @@ Memoraid is a Quizlet-style study app built with Expo for Android, iOS, and the 
 - Flashcard mode with tap-to-flip, swipe or button navigation, shuffle, easy/hard review marking, progress, and session resume.
 - Test mode with multiple choice, true/false, and written response questions.
 - Auto-grading for objective questions and guided self-review for written responses.
+- Math entry with statistics/probability keyboards and equation rendering across study views.
+- Stylus handwriting transcription with user-provided Gemini/OpenRouter keys and provider fallback.
+- Numeric/expression grading with guided self-review for unsupported answers.
+- Daily quests, XP, levels, streaks, and topic practice progress.
+- Settings with account-scoped on-device credentials.
 - Notes import from pasted text or picked text files.
 - Local dashboard with all sets, recent activity, due cards, and saved test scores.
 
@@ -78,6 +85,7 @@ SQLite tables created on boot:
 - `test_attempts`
 - `test_questions`
 - `review_stats`
+- `review_events`
 
 The native database is initialized in [`src/db/client.ts`](src/db/client.ts) and schema versioned in [`src/db/schema.ts`](src/db/schema.ts). The web repositories use the owner-scoped Supabase schema in [`supabase/migrations`](supabase/migrations).
 
@@ -194,9 +202,14 @@ term<TAB>definition
 Example: optional example for the previous card
 ```
 
+## Math, Handwriting, and Progress
+
+Setup, credential storage, recognition deployment, grading rules, and rewards are documented in [docs/math-and-progress.md](docs/math-and-progress.md). Apply the new Supabase migration and deploy `study-ai` before enabling handwriting recognition on the web. Native apps require a rebuild for WebView support.
+
 ## Verification
 
 ```bash
+npm test
 npm run typecheck
 npm run web:build
 ```

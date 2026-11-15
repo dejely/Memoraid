@@ -1,4 +1,4 @@
-export const LATEST_DB_VERSION = 2;
+export const LATEST_DB_VERSION = 3;
 
 export const MIGRATIONS: Record<number, string> = {
   1: `
@@ -100,5 +100,19 @@ export const MIGRATIONS: Record<number, string> = {
     WHERE title = 'Biology Foundations'
       AND description = 'Short, high-yield cell and genetics notes for quick study blocks.'
       AND tags_json = '["biology","science","seeded"]';
+  `,
+  3: `
+    ALTER TABLE cards ADD COLUMN grading_mode TEXT NOT NULL DEFAULT 'self_review' CHECK(grading_mode IN ('self_review','numeric','expression'));
+    ALTER TABLE cards ADD COLUMN numeric_tolerance REAL NOT NULL DEFAULT 0.001 CHECK(numeric_tolerance >= 0);
+    ALTER TABLE test_questions ADD COLUMN grading_method TEXT NOT NULL DEFAULT 'self_review' CHECK(grading_method IN ('self_review','automatic'));
+    UPDATE test_questions SET grading_method = 'automatic' WHERE question_type <> 'written';
+    CREATE TABLE review_events (
+      id TEXT PRIMARY KEY NOT NULL, card_id TEXT NOT NULL, deck_id TEXT NOT NULL,
+      result TEXT NOT NULL CHECK(result IN ('easy','hard','correct','incorrect')),
+      happened_at TEXT NOT NULL, study_date TEXT NOT NULL, timezone TEXT NOT NULL,
+      was_due INTEGER NOT NULL, was_weak INTEGER NOT NULL,
+      grading_method TEXT NOT NULL CHECK(grading_method IN ('self_review','automatic'))
+    );
+    CREATE INDEX review_events_card_day ON review_events(card_id, study_date, happened_at);
   `,
 };

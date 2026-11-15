@@ -1,3 +1,4 @@
+import { gradeMath } from "../services/math/grading";
 import { create } from "zustand";
 
 import type { RuntimeTestAnswer, RuntimeTestQuestion } from "../types/models";
@@ -44,10 +45,12 @@ export const useTestSessionStore = create<TestSessionState>((set) => ({
           selectedAnswer,
           isCorrect,
           reviewed: true,
+          gradingMethod: "automatic",
         },
       },
     })),
-  submitWrittenDraft: (question, selectedAnswer) =>
+  submitWrittenDraft: (question, selectedAnswer) => {
+    const grade = gradeMath(selectedAnswer, question.correctAnswer, question.gradingMode, question.numericTolerance);
     set((state) => ({
       answers: {
         ...state.answers,
@@ -56,11 +59,13 @@ export const useTestSessionStore = create<TestSessionState>((set) => ({
           cardId: question.cardId,
           questionType: question.questionType,
           selectedAnswer,
-          isCorrect: null,
-          reviewed: false,
+          isCorrect: grade,
+          reviewed: grade !== null,
+          gradingMethod: grade === null ? "self_review" : "automatic",
         },
       },
-    })),
+    }));
+  },
   reviewWrittenAnswer: (question, isCorrect) =>
     set((state) => ({
       answers: {
@@ -76,6 +81,7 @@ export const useTestSessionStore = create<TestSessionState>((set) => ({
           }),
           isCorrect,
           reviewed: true,
+          gradingMethod: "self_review",
         },
       },
     })),

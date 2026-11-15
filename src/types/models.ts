@@ -1,3 +1,4 @@
+import type { GradingMode, GradingMethod } from "../services/math/grading";
 export type SourceType = "manual" | "imported";
 export type ReviewResult = "easy" | "hard" | "correct" | "incorrect";
 export type SessionMode = "flashcard";
@@ -10,6 +11,8 @@ export interface StudyCard {
   term: string;
   definition: string;
   example: string | null;
+  gradingMode?: GradingMode;
+  numericTolerance?: number;
   sortOrder: number;
   createdAt: string;
   updatedAt: string;
@@ -55,6 +58,8 @@ export interface CardDraft {
   term: string;
   definition: string;
   example?: string;
+  gradingMode?: GradingMode;
+  numericTolerance?: number;
 }
 
 export interface FlashcardSession {
@@ -109,7 +114,10 @@ export interface TestQuestionRecord {
   questionType: QuestionType;
   prompt: string;
   correctAnswer: string;
+  gradingMode?: GradingMode;
+  numericTolerance?: number;
   selectedAnswer: string | null;
+  gradingMethod?: GradingMethod;
   options: string[] | null;
   isCorrect: boolean | null;
   explanation: string | null;
@@ -129,6 +137,8 @@ export interface RuntimeTestQuestion {
   questionType: QuestionType;
   prompt: string;
   correctAnswer: string;
+  gradingMode?: GradingMode;
+  numericTolerance?: number;
   options?: string[];
   explanation: string;
 }
@@ -140,6 +150,7 @@ export interface RuntimeTestAnswer {
   selectedAnswer: string;
   isCorrect: boolean | null;
   reviewed: boolean;
+  gradingMethod?: GradingMethod;
 }
 
 export interface ImportPreview {

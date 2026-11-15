@@ -1,10 +1,4 @@
-import type {
-  DeckSummary,
-  RuntimeTestAnswer,
-  RuntimeTestQuestion,
-  TestAttemptSummary,
-} from "../../types/models";
-import { createId } from "../../utils/ids";
+import type { DeckSummary, RuntimeTestAnswer, RuntimeTestQuestion, TestAttemptSummary } from "../../types/models";
 import { cloudDatabase, throwIfCloudError } from "./supabase-helpers.web";
 
 type SaveAttemptInput = {
@@ -18,7 +12,9 @@ type SaveAttemptInput = {
 export async function getRecentTestAttempts(limit = 20): Promise<TestAttemptSummary[]> {
   const result = await cloudDatabase()
     .from("test_attempts")
-    .select("id,deck_id,deck_title,total_questions,correct_answers,objective_correct,objective_total,written_count,score_percent,started_at,finished_at,weak_card_count")
+    .select(
+      "id,deck_id,deck_title,total_questions,correct_answers,objective_correct,objective_total,written_count,score_percent,started_at,finished_at,weak_card_count",
+    )
     .order("finished_at", { ascending: false })
     .limit(limit);
   throwIfCloudError(result.error, "Test history could not be loaded");
@@ -41,7 +37,7 @@ export async function getRecentTestAttempts(limit = 20): Promise<TestAttemptSumm
 
 export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> {
   const client = cloudDatabase();
-  const attemptId = createId("attempt");
+  const attemptId = `attempt:${input.startedAt}`;
   const answersByQuestionId = new Map(input.answers.map((answer) => [answer.questionId, answer]));
   const objectiveAnswers = input.answers.filter((answer) => answer.questionType !== "written");
   const objectiveCorrect = objectiveAnswers.filter((answer) => answer.isCorrect).length;
@@ -50,10 +46,9 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
   const weakCardCount = new Set(
     input.answers.filter((answer) => answer.isCorrect === false).map((answer) => answer.cardId),
   ).size;
-  const scorePercent =
-    input.questions.length === 0 ? 0 : Math.round((correctAnswers / input.questions.length) * 100);
+  const scorePercent = input.questions.length === 0 ? 0 : Math.round((correctAnswers / input.questions.length) * 100);
 
-  const attemptResult = await client.from("test_attempts").insert({
+  const attemptResult = await client.from("test_attempts").upsert({
     id: attemptId,
     deck_id: input.deck.id,
     deck_title: input.deck.title,
@@ -71,7 +66,7 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
 
   try {
     if (input.questions.length > 0) {
-      const questionsResult = await client.from("test_questions").insert(
+      const questionsResult = await client.from("test_questions").upsert(
         input.questions.map((question) => {
           const answer = answersByQuestionId.get(question.id);
 
@@ -86,6 +81,7 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
             options_json: question.options ?? null,
             is_correct: typeof answer?.isCorrect === "boolean" ? answer.isCorrect : null,
             explanation: question.explanation,
+            grading_method: answer?.gradingMethod ?? "self_review",
             created_at: input.finishedAt,
           };
         }),
@@ -100,3 +96,28 @@ export async function saveTestAttempt(input: SaveAttemptInput): Promise<string> 
   return attemptId;
 }
 
+export async function getAttemptQuestions(
+  attemptId: string,
+): Promise<import("../../types/models").TestQuestionRecord[]> {
+  const { data, error } = await cloudDatabase()
+    .from("test_questions")
+    .select("*")
+    .eq("attempt_id", attemptId)
+    .order("created_at")
+    .order("id");
+  throwIfCloudError(error, "Saved answers could not be loaded");
+  return (data ?? []).map((row) => ({
+    id: row.id,
+    attemptId: row.attempt_id,
+    cardId: row.card_id,
+    questionType: row.question_type,
+    prompt: row.prompt,
+    correctAnswer: row.correct_answer,
+    selectedAnswer: row.selected_answer,
+    options: row.options_json,
+    isCorrect: row.is_correct,
+    explanation: row.explanation,
+    createdAt: row.created_at,
+    gradingMethod: row.grading_method,
+  }));
+}

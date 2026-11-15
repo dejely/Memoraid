@@ -1,4 +1,6 @@
-import { Pressable, Text, TextInput, View } from "react-native";
+import { AnswerInput } from "./math/AnswerInput";
+import { MathContent } from "./math/MathContent";
+import { Pressable, Text, View } from "react-native";
 
 import type { RuntimeTestQuestion } from "../types/models";
 import { cn } from "../utils/classnames";
@@ -22,18 +24,16 @@ export function QuestionPanel({
       <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">
         {question.questionType.replace("_", " ")}
       </Text>
-      <Text className="text-2xl font-semibold leading-9 text-ink-900 dark:text-white">{question.prompt}</Text>
+      <MathContent className="text-2xl font-semibold leading-9 text-ink-900 dark:text-white">
+        {question.prompt}
+      </MathContent>
 
       {question.questionType === "written" ? (
-        <TextInput
-          editable={!answerLocked}
-          multiline
-          value={selectedAnswer}
-          onChangeText={onChangeText}
-          placeholder="Type what you remember..."
-          placeholderTextColor="#6f88b7"
-          textAlignVertical="top"
-          className="min-h-36 rounded-3xl border border-ink-200 bg-ink-50 px-4 py-4 text-base text-ink-900 dark:border-ink-600 dark:bg-ink-700 dark:text-white"
+        <AnswerInput
+          key={question.id}
+          value={selectedAnswer ?? ""}
+          onChangeText={onChangeText ?? (() => {})}
+          locked={!!answerLocked}
         />
       ) : (
         <View className="gap-3">
@@ -52,14 +52,14 @@ export function QuestionPanel({
                     : "border-ink-200 bg-white dark:border-ink-600 dark:bg-ink-700",
                 )}
               >
-                <Text
+                <MathContent
                   className={cn(
                     "text-base leading-7",
                     isSelected ? "text-sea-900 dark:text-sea-100" : "text-ink-800 dark:text-ink-100",
                   )}
                 >
                   {option}
-                </Text>
+                </MathContent>
               </Pressable>
             );
           })}
