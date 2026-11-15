@@ -34,8 +34,8 @@ export function useRecordReviewMutation(deckId: string) {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (input: { cardId: string; result: "easy" | "hard" | "correct" | "incorrect" }) =>
-      recordReview(input.cardId, deckId, input.result),
+    mutationFn: (input: { cardId: string; result: "easy" | "hard" | "correct" | "incorrect"; eventId: string }) =>
+      recordReview(input.cardId, deckId, input.result, input.eventId),
     onSuccess: async () => {
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ["dashboard"] }),

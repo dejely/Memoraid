@@ -155,7 +155,8 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
   const panResponder = useMemo(
     () =>
       PanResponder.create({
-        onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dy) < 20,
+        onMoveShouldSetPanResponder: (_, gestureState) =>
+          Math.abs(gestureState.dx) > 12 && Math.abs(gestureState.dy) < 20,
         onPanResponderMove: (_, gestureState) => {
           translateX.setValue(gestureState.dx);
         },
@@ -176,23 +177,30 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
     [isLastCard, store, translateX],
   );
 
+  const markingRef = useRef(false);
+
   async function handleMark(result: "easy" | "hard"): Promise<void> {
     if (!currentCard) {
       return;
     }
 
-    store.mark(result);
-    recordReviewMutation.mutate({
-      cardId: currentCard.id,
-      result,
-    });
-
-    if (isLastCard) {
-      store.complete();
-      return;
+    if (markingRef.current) return;
+    markingRef.current = true;
+    try {
+      await recordReviewMutation.mutateAsync({
+        cardId: currentCard.id,
+        result,
+        eventId: `flash:${store.startedAt}:${currentCard.id}:${store.easyCount + store.hardCount}`,
+      });
+      store.mark(result);
+      if (isLastCard) store.complete();
+      else store.next();
+      setSessionSaveError(null);
+    } catch {
+      setSessionSaveError("Your review was not saved. Retry marking this card before moving on.");
+    } finally {
+      markingRef.current = false;
     }
-
-    store.next();
   }
 
   function handleFlip(): void {
@@ -244,7 +252,9 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
             <Text className="text-xs font-medium text-sea-800 dark:text-sea-100">Easy marked {store.easyCount}</Text>
           </View>
           <View className="rounded-full bg-amber-50 px-3 py-2 dark:bg-amber-900/40">
-            <Text className="text-xs font-medium text-amber-800 dark:text-amber-100">Hard marked {store.hardCount}</Text>
+            <Text className="text-xs font-medium text-amber-800 dark:text-amber-100">
+              Hard marked {store.hardCount}
+            </Text>
           </View>
           {store.completedAt ? (
             <View className="rounded-full bg-ink-100 px-3 py-2 dark:bg-ink-700">
@@ -282,7 +292,12 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
           disabled={store.currentIndex === 0}
           onPress={store.previous}
         />
-        <PrimaryButton className="flex-1" label={store.flipped ? "Show term" : "Flip"} variant="secondary" onPress={handleFlip} />
+        <PrimaryButton
+          className="flex-1"
+          label={store.flipped ? "Show term" : "Flip"}
+          variant="secondary"
+          onPress={handleFlip}
+        />
         <PrimaryButton
           className="flex-1"
           label={isLastCard ? "Finish" : "Next"}
@@ -298,8 +313,19 @@ export default function StudyScreen({ deckId }: { deckId: string }) {
       </View>
 
       <View className="flex-row gap-3">
-        <PrimaryButton className="flex-1" label="Mark hard" variant="secondary" onPress={() => void handleMark("hard")} />
-        <PrimaryButton className="flex-1" label="Mark easy" onPress={() => void handleMark("easy")} />
+        <PrimaryButton
+          disabled={recordReviewMutation.isPending}
+          className="flex-1"
+          label="Mark hard"
+          variant="secondary"
+          onPress={() => void handleMark("hard")}
+        />
+        <PrimaryButton
+          disabled={recordReviewMutation.isPending}
+          className="flex-1"
+          label="Mark easy"
+          onPress={() => void handleMark("easy")}
+        />
       </View>
 
       <SectionCard className="gap-3">
