@@ -147,7 +147,7 @@ export async function runRecognition(
           : result.choices?.[0]?.message?.content;
       const parsed = parseTranscription(typeof text === "string" ? text : "");
       report?.({ provider, status: parsed.unreadable ? "unreadable" : "success", durationMs: Date.now() - started });
-      return { ...parsed, provider, model };
+      return { ...parsed, provider, model: typeof result.model === "string" ? result.model : typeof result.modelVersion === "string" ? result.modelVersion : model };
     } catch {
       report?.({
         provider,

@@ -1,3 +1,4 @@
+import type { Ink } from "../../features/practice/ink";
 import { useEffect, useRef, useState } from "react";
 import { Modal, ScrollView, Text, TextInput, View } from "react-native";
 import { PrimaryButton } from "../PrimaryButton";
@@ -14,13 +15,22 @@ export function AnswerInput({
   onChangeText,
   locked = false,
   allowHandwriting = true,
+  initialInk,
+  onInkChange,
+  onConfirmed,
 }: {
   value: string;
   onChangeText: (value: string) => void;
   locked?: boolean;
   allowHandwriting?: boolean;
+  initialInk?: Ink;
+  onInkChange?: (ink: Ink) => void;
+  onConfirmed?: (original: string, confirmed: string) => void;
 }) {
   const [mode, setMode] = useState<"text" | "editor" | "draw">("text");
+  const ink = useRef<Ink | undefined>(initialInk);
+  const transcription = useRef("");
+  const previewStarted = useRef(0);
   const [preview, setPreview] = useState("");
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewReady, setPreviewReady] = useState(false);
@@ -42,6 +52,8 @@ export function AnswerInput({
     if (event.type === "change" && !locked) onChangeText(`\\(${event.value}\\)`);
     if (event.type === "inkChanged") {
       revision.current = event.revision;
+      ink.current = event.ink;
+      onInkChange?.(event.ink);
       cancel();
       setPreview("");
       setPreviewOpen(false);
@@ -55,7 +67,7 @@ export function AnswerInput({
       setBusy(true);
       setPreview("");
       setPreviewOpen(false);
-      setMessage("");
+      setMessage(`Prepared drawing in ${Math.round(event.preparationMs)}ms. Waiting for recognition service…`);
       const timer = setTimeout(() => controller.abort(), 45000);
       void recognizeMath(event.image, controller.signal)
         .then((result) => {
@@ -64,9 +76,11 @@ export function AnswerInput({
           setMessage(
             result.unreadable
               ? "Could not read this expression. Adjust your drawing and try again."
-              : `Recognized with ${result.provider} · ${result.model}. Check and edit before using it.`,
+              : `Recognized with ${result.provider} · ${result.model}. ${result.networkMs ?? 0}ms round trip; auth ${result.timings?.authMs ?? 0}ms, provider ${result.timings?.upstreamMs ?? 0}ms. Check before using it.`,
           );
           if (!result.unreadable) {
+            transcription.current = result.latex;
+            previewStarted.current = Date.now();
             setPreviewReady(false);
             setPreview(result.latex);
             setPreviewOpen(true);
@@ -130,7 +144,7 @@ export function AnswerInput({
         />
       ) : (
         <MathSurface
-          config={{ mode, value: mode === "editor" ? unwrapMath(value) : "", locked, busy }}
+          config={{ mode, value: mode === "editor" ? unwrapMath(value) : "", locked, busy, ink: ink.current }}
           onMessage={handleMessage}
         />
       )}
@@ -163,7 +177,13 @@ export function AnswerInput({
                 <MathSurface
                   config={{ mode: "editor", value: preview, locked }}
                   onMessage={(event) => {
-                    if (event.type === "configured") setPreviewReady(true);
+                    if (event.type === "configured") {
+                      setPreviewReady(true);
+                      if (previewStarted.current) {
+                        setMessage(current => `${current} Preview ready in ${Date.now() - previewStarted.current}ms.`);
+                        previewStarted.current = 0;
+                      }
+                    }
                     if (event.type === "change") setPreview(event.value);
                   }}
                 />
@@ -181,6 +201,7 @@ export function AnswerInput({
                 disabled={locked || !previewReady || !preview.trim()}
                 label="Use this equation"
                 onPress={() => {
+                  onConfirmed?.(transcription.current, preview);
                   onChangeText(`\\(${preview}\\)`);
                   setMode("editor");
                   setPreview("");

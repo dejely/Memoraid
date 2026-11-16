@@ -19,6 +19,9 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
 };
 export const EMPTY_CREDENTIALS: AiCredentials = { gemini: "", openrouter: "" };
 export interface RecognitionResult {
+  requestId?: string;
+  timings?: { authMs: number; upstreamMs: number };
+  networkMs?: number;
   latex: string;
   unreadable: boolean;
   provider: AiProvider;
