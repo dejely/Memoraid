@@ -49,7 +49,8 @@ export function AnswerInput({
     if (locked) cancel();
   }, [locked]);
   function handleMessage(event: SurfaceMessage) {
-    if (event.type === "change" && !locked) onChangeText(`\\(${event.value}\\)`);
+    if (event.type === "change" && !locked)
+      onChangeText(`\\(${event.value}\\)`);
     if (event.type === "inkChanged") {
       revision.current = event.revision;
       ink.current = event.ink;
@@ -67,16 +68,24 @@ export function AnswerInput({
       setBusy(true);
       setPreview("");
       setPreviewOpen(false);
-      setMessage(`Prepared drawing in ${Math.round(event.preparationMs)}ms. Waiting for recognition service…`);
+      setMessage(
+        `Prepared drawing in ${Math.round(event.preparationMs)}ms. Waiting for recognition service…`,
+      );
       const timer = setTimeout(() => controller.abort(), 45000);
       void recognizeMath(event.image, controller.signal)
         .then((result) => {
-          if (controller.signal.aborted || request.current !== controller || revision.current !== startedRevision)
+          if (
+            controller.signal.aborted ||
+            request.current !== controller ||
+            revision.current !== startedRevision
+          )
             return;
           setMessage(
             result.unreadable
               ? "Could not read this expression. Adjust your drawing and try again."
-              : `Recognized with ${result.provider} · ${result.model}. ${result.networkMs ?? 0}ms round trip; auth ${result.timings?.authMs ?? 0}ms, provider ${result.timings?.upstreamMs ?? 0}ms. Check before using it.`,
+              : result.cached
+                ? `Reused recognition from ${result.provider} · ${result.model}. Check before using it.`
+                : `Recognized with ${result.provider} · ${result.model}. ${result.networkMs ?? 0}ms round trip; auth ${result.timings?.authMs ?? 0}ms, provider ${result.timings?.upstreamMs ?? 0}ms. Check before using it.`,
           );
           if (!result.unreadable) {
             transcription.current = result.latex;
@@ -108,18 +117,30 @@ export function AnswerInput({
   if (locked)
     return (
       <View className="gap-2">
-        <Text className="text-sm text-ink-700 dark:text-ink-100">Your answer</Text>
-        <MathContent className="text-base text-ink-900 dark:text-white">{value}</MathContent>
+        <Text className="text-sm text-ink-700 dark:text-ink-100">
+          Your answer
+        </Text>
+        <MathContent className="text-base text-ink-900 dark:text-white">
+          {value}
+        </MathContent>
       </View>
     );
   return (
     <View className="gap-3">
       <View className="flex-row flex-wrap gap-2">
-        {(["text", "editor", ...(allowHandwriting ? ["draw"] : [])] as const).map((item) => (
+        {(
+          ["text", "editor", ...(allowHandwriting ? ["draw"] : [])] as const
+        ).map((item) => (
           <PrimaryButton
             key={item}
             disabled={locked}
-            label={item === "editor" ? "Math" : item === "draw" ? "Handwrite" : "Text"}
+            label={
+              item === "editor"
+                ? "Math"
+                : item === "draw"
+                  ? "Handwrite"
+                  : "Text"
+            }
             variant={mode === item ? "primary" : "secondary"}
             onPress={() => {
               cancel();
@@ -144,18 +165,45 @@ export function AnswerInput({
         />
       ) : (
         <MathSurface
-          config={{ mode, value: mode === "editor" ? unwrapMath(value) : "", locked, busy, ink: ink.current }}
+          config={{
+            mode,
+            value: mode === "editor" ? unwrapMath(value) : "",
+            locked,
+            busy,
+            ink: ink.current,
+          }}
           onMessage={handleMessage}
         />
       )}
-      {busy ? <PrimaryButton label="Cancel recognition" variant="secondary" onPress={cancel} /> : null}
+      {busy ? (
+        <PrimaryButton
+          label="Cancel recognition"
+          variant="secondary"
+          onPress={cancel}
+        />
+      ) : null}
       {message ? (
-        <Text accessibilityRole="alert" className="text-sm text-ink-700 dark:text-ink-100">
+        <Text
+          accessibilityRole="alert"
+          className="text-sm text-ink-700 dark:text-ink-100"
+        >
           {message}
         </Text>
       ) : null}
-      <Modal visible={previewOpen} transparent animationType="none" onRequestClose={() => setPreviewOpen(false)}>
-        <View style={{ flex: 1, padding: 20, justifyContent: "center", backgroundColor: "rgba(0,0,0,0.55)" }}>
+      <Modal
+        visible={previewOpen}
+        transparent
+        animationType="none"
+        onRequestClose={() => setPreviewOpen(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            padding: 20,
+            justifyContent: "center",
+            backgroundColor: "rgba(0,0,0,0.55)",
+          }}
+        >
           <View
             style={{
               height: "90%",
@@ -168,7 +216,9 @@ export function AnswerInput({
             }}
             className="bg-white dark:bg-ink-800"
           >
-            <Text className="text-lg font-semibold text-ink-900 dark:text-white">Check recognized equation</Text>
+            <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+              Check recognized equation
+            </Text>
             <Text className="text-sm text-ink-700 dark:text-ink-100">
               Edit any recognition mistakes before using this answer.
             </Text>
@@ -180,7 +230,11 @@ export function AnswerInput({
                     if (event.type === "configured") {
                       setPreviewReady(true);
                       if (previewStarted.current) {
-                        setMessage(current => `${current} Preview ready in ${Date.now() - previewStarted.current}ms.`);
+                        const previewMs = Date.now() - previewStarted.current;
+                        setMessage(
+                          (current) =>
+                            `${current} Preview ready in ${previewMs}ms.`,
+                        );
                         previewStarted.current = 0;
                       }
                     }
@@ -214,8 +268,12 @@ export function AnswerInput({
       </Modal>
       {mode === "draw" && value ? (
         <View>
-          <Text className="text-sm text-ink-700 dark:text-ink-100">Current answer</Text>
-          <MathContent className="text-ink-900 dark:text-white">{value}</MathContent>
+          <Text className="text-sm text-ink-700 dark:text-ink-100">
+            Current answer
+          </Text>
+          <MathContent className="text-ink-900 dark:text-white">
+            {value}
+          </MathContent>
         </View>
       ) : null}
     </View>

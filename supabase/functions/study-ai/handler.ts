@@ -50,7 +50,7 @@ export async function handleRecognitionRequest(
     }
     const requestId = typeof raw.requestId === "string" && /^[a-zA-Z0-9:_-]{1,80}$/.test(raw.requestId) ? raw.requestId : crypto.randomUUID();
     const upstreamStarted = Date.now();
-    const result = await runRecognition(validateInput(raw), fetcher, request.signal, report);
+    const result = await runRecognition(validateInput(raw), fetcher, request.signal, metric => report?.({ ...metric, requestId }));
     return json({ ...result, requestId, timings: { authMs, upstreamMs: Date.now() - upstreamStarted } });
   } catch (error) {
     // Never echo provider response bodies or request details containing credentials/ink.

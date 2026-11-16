@@ -23,7 +23,7 @@ function changed() {
   revision++;
   send({ type: "inkChanged", revision, ink: { width: 1000, height: 400, strokes } });
 }
-function redraw(canvas) {
+function redraw(canvas, visibleStrokes = strokes) {
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -31,7 +31,7 @@ function redraw(canvas) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#172136";
-  for (const stroke of strokes) {
+  for (const stroke of visibleStrokes) {
     ctx.beginPath();
     stroke.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     if (stroke.length === 1) ctx.lineTo(stroke[0][0] + 0.1, stroke[0][1]);
@@ -135,18 +135,18 @@ function setup(next) {
     }
     button("Replay", async () => {
       if (active || config.busy) return;
-      const saved = structuredClone(strokes);
+      const saved = structuredClone(strokes), shown = [];
       const replayRevision = revision;
-      strokes = []; redraw(canvas);
+      redraw(canvas, shown);
       for (const stroke of saved) {
-        const shown = []; strokes.push(shown);
+        const part = []; shown.push(part);
         for (let i = 0; i < stroke.length; i++) {
           if (revision !== replayRevision || config.mode !== "draw") return;
-          shown.push(stroke[i]); redraw(canvas);
+          part.push(stroke[i]); redraw(canvas, shown);
           await new Promise(r => setTimeout(r, Math.min(60, Math.max(1, (stroke[i+1]?.[2] || stroke[i][2]) - stroke[i][2]))));
         }
       }
-      strokes = saved; redraw(canvas);
+      if (revision === replayRevision) redraw(canvas);
     });
     button("Undo", () => {
       if (config.locked) return;
