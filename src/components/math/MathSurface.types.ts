@@ -1,6 +1,8 @@
+import type { Ink } from "../../features/practice/ink";
 export interface SurfaceConfig {
   mode: "render" | "editor" | "draw";
   value: string;
+  ink?: Ink;
   locked?: boolean;
   busy?: boolean;
   color?: string;
@@ -10,8 +12,8 @@ export type SurfaceMessage =
   | { type: "configured" }
   | { type: "height"; height: number }
   | { type: "change"; value: string }
-  | { type: "inkChanged"; revision: number }
-  | { type: "recognize"; image: string; revision: number };
+  | { type: "inkChanged"; revision: number; ink: Ink }
+  | { type: "recognize"; image: string; revision: number; preparationMs: number };
 export interface MathSurfaceProps {
   config: SurfaceConfig;
   onMessage?: (message: SurfaceMessage) => void;

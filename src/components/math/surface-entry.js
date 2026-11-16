@@ -1,3 +1,4 @@
+import { inkBounds } from "../../features/practice/ink";
 import { MathfieldElement, convertLatexToMarkup, initVirtualKeyboardInCurrentBrowsingContext } from "mathlive";
 // Sandboxed frames have an opaque origin; keep the keyboard inside this frame.
 if (window !== window.top) {
@@ -20,9 +21,9 @@ const send = (value) => {
 };
 function changed() {
   revision++;
-  send({ type: "inkChanged", revision });
+  send({ type: "inkChanged", revision, ink: { width: 1000, height: 400, strokes } });
 }
-function redraw(canvas) {
+function redraw(canvas, visibleStrokes = strokes) {
   const ctx = canvas.getContext("2d");
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -30,7 +31,7 @@ function redraw(canvas) {
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.strokeStyle = "#172136";
-  for (const stroke of strokes) {
+  for (const stroke of visibleStrokes) {
     ctx.beginPath();
     stroke.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
     if (stroke.length === 1) ctx.lineTo(stroke[0][0] + 0.1, stroke[0][1]);
@@ -119,6 +120,7 @@ function setup(next) {
   if (reset) {
     field = null;
     window.mathVirtualKeyboard.hide();
+    strokes = structuredClone(next.ink?.strokes || strokes);
     root.replaceChildren();
     const tools = document.createElement("div");
     const canvas = document.createElement("canvas");
@@ -131,6 +133,21 @@ function setup(next) {
       tools.append(b);
       return b;
     }
+    button("Replay", async () => {
+      if (active || config.busy) return;
+      const saved = structuredClone(strokes), shown = [];
+      const replayRevision = revision;
+      redraw(canvas, shown);
+      for (const stroke of saved) {
+        const part = []; shown.push(part);
+        for (let i = 0; i < stroke.length; i++) {
+          if (revision !== replayRevision || config.mode !== "draw") return;
+          part.push(stroke[i]); redraw(canvas, shown);
+          await new Promise(r => setTimeout(r, Math.min(60, Math.max(1, (stroke[i+1]?.[2] || stroke[i][2]) - stroke[i][2]))));
+        }
+      }
+      if (revision === replayRevision) redraw(canvas);
+    });
     button("Undo", () => {
       if (config.locked) return;
       strokes.pop();
@@ -149,7 +166,13 @@ function setup(next) {
     });
     const recognize = button("Recognize", () => {
       if (config.locked || config.busy || !strokes.length) return;
-      send({ type: "recognize", image: canvas.toDataURL("image/png"), revision });
+      const started = performance.now();
+      const bounds = inkBounds({ width: canvas.width, height: canvas.height, strokes });
+      if (!bounds) return;
+      const crop = document.createElement("canvas");
+      crop.width = bounds.width; crop.height = bounds.height;
+      crop.getContext("2d").drawImage(canvas, bounds.x, bounds.y, bounds.width, bounds.height, 0, 0, bounds.width, bounds.height);
+      send({ type: "recognize", image: crop.toDataURL("image/png"), revision, preparationMs: performance.now() - started });
     });
     recognize.id = "recognize";
     const status = document.createElement("div");
@@ -165,6 +188,7 @@ function setup(next) {
       return [
         ((event.clientX - rect.left) * canvas.width) / rect.width,
         ((event.clientY - rect.top) * canvas.height) / rect.height,
+        Date.now(), event.pressure,
       ];
     };
     canvas.onpointerdown = (e) => {
@@ -193,7 +217,7 @@ function setup(next) {
   const recognize = document.getElementById("recognize");
   if (recognize) {
     recognize.disabled = !!next.busy || !!next.locked;
-    recognize.textContent = next.busy ? "Recognizing…" : "Recognize";
+    recognize.textContent = next.busy ? "Waiting for provider…" : "Recognize";
   }
 }
 function configure(next) {

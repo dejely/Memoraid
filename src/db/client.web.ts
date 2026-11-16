@@ -1,6 +1,2 @@
-/**
- * The web build uses Supabase as its online source of truth, so there is no
- * browser-side SQLite database to initialize.
- */
+/** Account-scoped IndexedDB opens after authentication in local/store. */
 export async function initializeDatabase(): Promise<void> {}
-

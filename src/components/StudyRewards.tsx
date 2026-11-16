@@ -11,7 +11,6 @@ export function StudyRewards() {
   const query = useQuery({
     queryKey: ["dashboard", "rewards", user?.id, studyDay()],
     queryFn: getStudyProgress,
-    refetchInterval: 60000,
   });
   useEffect(() => {
     void query.refetch();

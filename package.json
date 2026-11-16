@@ -11,7 +11,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "web:build": "npm run math:build && expo export --platform web --clear",
+    "web:build": "npm run math:build && expo export --platform web --clear && node scripts/build-offline-shell.mjs",
     "typecheck": "npm run math:build && tsc --noEmit",
     "apk:release": "npx eas-cli build --platform android --profile apk-release",
     "aab:release": "npx eas-cli build --platform android --profile production",
@@ -19,13 +19,16 @@
     "aab:local": "npx eas-cli build --platform android --profile production --local",
     "math:build": "node scripts/build-math-surface.mjs",
     "postinstall": "npm run math:build",
-    "test": "tsx --test tests/*.test.ts"
+    "test": "tsx --test tests/*.test.ts",
+    "benchmark:recognition": "tsx scripts/recognition-benchmark.ts"
   },
   "dependencies": {
     "@cortex-js/compute-engine": "^0.173.0",
     "@supabase/supabase-js": "^2.112.4",
     "@tanstack/react-query": "^5.95.2",
     "clsx": "^2.1.1",
+    "dexie": "4.4.7",
+    "dompurify": "3.4.18",
     "expo": "~54.0.33",
     "expo-constants": "~18.0.13",
     "expo-document-picker": "~14.0.8",
@@ -47,12 +50,14 @@
     "react-native-webview": "13.15.0",
     "tailwind-merge": "^3.3.1",
     "tailwindcss": "^3.4.17",
+    "ts-fsrs": "5.4.2",
     "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@types/node": "^22.20.5",
     "@types/react": "~19.1.10",
     "esbuild": "^0.28.2",
+    "fake-indexeddb": "6.2.8",
     "tsx": "^4.23.15",
     "typescript": "~5.9.2"
   }

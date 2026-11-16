@@ -19,12 +19,19 @@ export const DEFAULT_AI_SETTINGS: AiSettings = {
 };
 export const EMPTY_CREDENTIALS: AiCredentials = { gemini: "", openrouter: "" };
 export interface RecognitionResult {
+  cached?: boolean;
+  requestId?: string;
+  timings?: { authMs: number; upstreamMs: number };
+  networkMs?: number;
   latex: string;
   unreadable: boolean;
   provider: AiProvider;
   model: string;
 }
-export function decodeAiConfiguration(raw: string | null): { settings: AiSettings; credentials: AiCredentials } {
+export function decodeAiConfiguration(raw: string | null): {
+  settings: AiSettings;
+  credentials: AiCredentials;
+} {
   let parsed: any;
   try {
     parsed = raw ? JSON.parse(raw) : {};
@@ -38,14 +45,24 @@ export function decodeAiConfiguration(raw: string | null): { settings: AiSetting
           ? parsed.settings.geminiModel
           : DEFAULT_AI_SETTINGS.geminiModel,
       openrouterModel:
-        typeof parsed?.settings?.openrouterModel === "string" && isFreeOpenRouterModel(parsed.settings.openrouterModel)
+        typeof parsed?.settings?.openrouterModel === "string" &&
+        isFreeOpenRouterModel(parsed.settings.openrouterModel)
           ? parsed.settings.openrouterModel
           : DEFAULT_AI_SETTINGS.openrouterModel,
-      fallbackEnabled: typeof parsed?.settings?.fallbackEnabled === "boolean" ? parsed.settings.fallbackEnabled : true,
+      fallbackEnabled:
+        typeof parsed?.settings?.fallbackEnabled === "boolean"
+          ? parsed.settings.fallbackEnabled
+          : true,
     },
     credentials: {
-      gemini: typeof parsed?.credentials?.gemini === "string" ? parsed.credentials.gemini : "",
-      openrouter: typeof parsed?.credentials?.openrouter === "string" ? parsed.credentials.openrouter : "",
+      gemini:
+        typeof parsed?.credentials?.gemini === "string"
+          ? parsed.credentials.gemini
+          : "",
+      openrouter:
+        typeof parsed?.credentials?.openrouter === "string"
+          ? parsed.credentials.openrouter
+          : "",
     },
   };
 }

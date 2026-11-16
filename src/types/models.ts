@@ -19,6 +19,7 @@ export interface StudyCard {
 }
 
 export interface ReviewStats {
+  fsrs?: import("ts-fsrs").CardInput;
   cardId: string;
   deckId: string;
   easeScore: number;

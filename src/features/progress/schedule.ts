@@ -1,5 +1,24 @@
+import { createEmptyCard, fsrs, Rating, type CardInput } from "ts-fsrs";
 import type { ReviewResult, ReviewStats } from "../../types/models";
-export function calculateNextState(existing: ReviewStats | null, result: ReviewResult, timestamp: string): ReviewStats {
+import type { ReviewEvent } from "./model";
+const scheduler = fsrs({ enable_fuzz: false });
+const ratings = {
+  incorrect: Rating.Again,
+  correct: Rating.Good,
+  hard: Rating.Hard,
+  easy: Rating.Easy,
+} as const;
+export function initializeSchedule(
+  existing: ReviewStats | null,
+  at: string,
+): CardInput {
+  return existing?.fsrs ?? createEmptyCard(new Date(existing?.dueAt ?? at));
+}
+export function calculateNextState(
+  existing: ReviewStats | null,
+  result: ReviewResult,
+  timestamp: string,
+): ReviewStats {
   const baseline = existing ?? {
     cardId: "",
     deckId: "",
@@ -10,30 +29,44 @@ export function calculateNextState(existing: ReviewStats | null, result: ReviewR
     dueAt: null,
     lastResult: null,
   };
-  const easyCount = baseline.easyCount + Number(result === "easy");
-  const hardCount = baseline.hardCount + Number(result === "hard" || result === "incorrect");
-  let easeScore = baseline.easeScore,
-    delayHours = 12;
-  if (result === "easy") {
-    easeScore = Math.min(5, easeScore + 0.35);
-    delayHours = Math.max(24, Math.round((easyCount + 1) * 18 * easeScore));
-  } else if (result === "correct") {
-    easeScore = Math.min(5, easeScore + 0.2);
-    delayHours = Math.max(18, Math.round(24 * easeScore));
-  } else if (result === "hard") {
-    easeScore = Math.max(1.3, easeScore - 0.4);
-    delayHours = 8;
-  } else {
-    easeScore = Math.max(1.2, easeScore - 0.55);
-    delayHours = 4;
-  }
+  const next = scheduler.next(
+    initializeSchedule(existing, timestamp),
+    new Date(timestamp),
+    ratings[result],
+  ).card;
   return {
     ...baseline,
-    easyCount,
-    hardCount,
-    easeScore,
-    dueAt: new Date(Date.parse(timestamp) + delayHours * 3600000).toISOString(),
+    fsrs: JSON.parse(JSON.stringify(next)),
+    dueAt: next.due.toISOString(),
     lastReviewedAt: timestamp,
     lastResult: result,
+    easyCount: baseline.easyCount + Number(result === "easy"),
+    hardCount:
+      baseline.hardCount + Number(result === "hard" || result === "incorrect"),
   };
+}
+export function replaySchedule(
+  baseline: ReviewStats | null,
+  events: ReviewEvent[],
+) {
+  let state = baseline;
+  const unique = new Map(events.map((event) => [event.id, event]));
+  for (const event of [...unique.values()]
+    .filter(
+      (e) =>
+        !baseline?.lastReviewedAt ||
+        Date.parse(e.happened_at) > Date.parse(baseline.lastReviewedAt),
+    )
+    .sort(
+      (a, b) =>
+        Date.parse(a.happened_at) - Date.parse(b.happened_at) ||
+        a.id.localeCompare(b.id),
+    )) {
+    state = {
+      ...calculateNextState(state, event.result, event.happened_at),
+      cardId: event.card_id,
+      deckId: event.deck_id,
+    };
+  }
+  return state;
 }

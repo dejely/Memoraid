@@ -66,7 +66,7 @@ export async function runRecognition(
   input: RelayInput,
   fetcher: typeof fetch = fetch,
   signal?: AbortSignal,
-  report?: (metric: { provider: Provider; status: string; durationMs: number }) => void,
+  report?: (metric: { provider: Provider; status: string; durationMs: number; requestId?: string }) => void,
 ) {
   if (!isFreeOpenRouterModel(input.settings.openrouterModel)) throw new RelayError(FREE_OPENROUTER_MODEL_ERROR);
   const configured = (["gemini", "openrouter"] as const).filter((p) => input.credentials[p].trim());
@@ -147,7 +147,7 @@ export async function runRecognition(
           : result.choices?.[0]?.message?.content;
       const parsed = parseTranscription(typeof text === "string" ? text : "");
       report?.({ provider, status: parsed.unreadable ? "unreadable" : "success", durationMs: Date.now() - started });
-      return { ...parsed, provider, model };
+      return { ...parsed, provider, model: typeof result.model === "string" ? result.model : typeof result.modelVersion === "string" ? result.modelVersion : model };
     } catch {
       report?.({
         provider,

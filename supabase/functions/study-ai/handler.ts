@@ -16,9 +16,11 @@ export async function handleRecognitionRequest(
   if (request.method === "OPTIONS") return new Response(null, { headers: cors });
   if (request.method !== "POST") return json({ error: "Use POST." }, 405);
   try {
+    const authStarted = Date.now();
     const token = request.headers.get("Authorization")?.replace(/^Bearer /i, "");
     if (!token) return json({ error: "Sign in before using recognition." }, 401);
     if (!(await authenticate(token))) return json({ error: "Your session expired. Sign in again." }, 401);
+    const authMs = Date.now() - authStarted;
     // Read incrementally: never buffer an unbounded user-controlled request.
     const reader = request.body?.getReader();
     if (!reader) throw new RelayError("Empty request.");
@@ -46,8 +48,10 @@ export async function handleRecognitionRequest(
     } catch {
       throw new RelayError("Invalid JSON.");
     }
-    const result = await runRecognition(validateInput(raw), fetcher, request.signal, report);
-    return json(result);
+    const requestId = typeof raw.requestId === "string" && /^[a-zA-Z0-9:_-]{1,80}$/.test(raw.requestId) ? raw.requestId : crypto.randomUUID();
+    const upstreamStarted = Date.now();
+    const result = await runRecognition(validateInput(raw), fetcher, request.signal, metric => report?.({ ...metric, requestId }));
+    return json({ ...result, requestId, timings: { authMs, upstreamMs: Date.now() - upstreamStarted } });
   } catch (error) {
     // Never echo provider response bodies or request details containing credentials/ink.
     return json(

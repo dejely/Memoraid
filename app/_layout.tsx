@@ -13,6 +13,10 @@ import { PrimaryButton } from "../src/components/PrimaryButton";
 import { ThemeProvider, useAppTheme } from "../src/components/ThemeProvider";
 import { useAppBootstrap } from "../src/hooks/useAppBootstrap";
 import { AuthProvider, useAuth } from "../src/services/auth/AuthProvider";
+import { setStudyAccount, onStudyChange } from "../src/db/local/store";
+import { syncStudy } from "../src/services/sync/study-sync";
+import { clearRecognitionCache } from "../src/services/ai/client";
+import { AppState, Platform } from "react-native";
 import SignInScreen from "./sign-in";
 
 function RootNavigator() {
@@ -46,9 +50,27 @@ function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
   const [preparedUserId, setPreparedUserId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (Platform.OS === "web" && process.env.NODE_ENV === "production" && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {});
     queryClient.clear();
+    clearRecognitionCache();
+    setStudyAccount(userId);
     setPreparedUserId(userId);
+    return () => setStudyAccount(null);
   }, [queryClient, userId]);
+
+  useEffect(() => {
+    if (!userId || preparedUserId !== userId) return;
+    let active = true;
+    const unsubscribe = onStudyChange(() => {
+      if (active) void queryClient.invalidateQueries();
+    });
+    const sync = () => { void syncStudy().catch(() => {}); };
+    sync();
+    const timer = setInterval(sync, 30000);
+    const listener = AppState.addEventListener('change', state => { if (state === 'active') sync(); });
+    if (Platform.OS === 'web') window.addEventListener('online',sync);
+    return () => { active=false; unsubscribe(); clearInterval(timer); listener.remove(); if (Platform.OS==='web') window.removeEventListener('online',sync); };
+  }, [userId, preparedUserId, queryClient]);
 
   if (isLoading || (userId && preparedUserId !== userId)) {
     return <LoadingState message="Restoring your secure session..." />;
@@ -76,8 +98,8 @@ export default function RootLayout() {
     () =>
       new QueryClient({
         defaultOptions: {
-          queries: { retry: 1 },
-          mutations: { retry: false },
+          queries: { retry: 1, networkMode: "always" },
+          mutations: { retry: false, networkMode: "always" },
         },
         mutationCache: new MutationCache({
           onError: (error) => {
