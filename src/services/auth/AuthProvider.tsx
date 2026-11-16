@@ -1,3 +1,5 @@
+import { authStorage } from "./auth-storage";
+const OFFLINE_SESSION_KEY = "memoraid.offline-session.v1";
 import type { Session, SupabaseClient, User } from "@supabase/supabase-js";
 import * as Linking from "expo-linking";
 import {
@@ -62,6 +64,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
     const authError = toMemoraidAuthError(error);
 
     if (authError.kind === "invalid-session" && client) {
+      await authStorage.removeItem(OFFLINE_SESSION_KEY);
       try {
         await clearLocalSession(client);
       } catch {
@@ -133,6 +136,14 @@ export function AuthProvider({ children }: PropsWithChildren) {
         setState({ session, isLoading: false, error: null });
       }
     } catch (error) {
+      const authError = toMemoraidAuthError(error);
+      if (authError.kind === "network") {
+        try {
+          const raw = await authStorage.getItem(OFFLINE_SESSION_KEY);
+          const cached = raw ? JSON.parse(raw) as Session : null;
+          if (cached?.user?.id && mountedRef.current) { setState({session:cached,isLoading:false,error:null}); return; }
+        } catch { /* Fall through to the connection error. */ }
+      }
       await updateFromError(error, client);
     }
   }, [getClient, handleCallbackUrl, updateFromError]);
@@ -152,7 +163,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     }
 
     const { data: authListener } = client.auth.onAuthStateChange((event, session) => {
-      if (event === "SIGNED_OUT") void clearWebAiCredentials().catch(() => {});
+      if (event === "SIGNED_OUT") { void clearWebAiCredentials().catch(() => {}); void authStorage.removeItem(OFFLINE_SESSION_KEY); }
+      else if (session) void authStorage.setItem(OFFLINE_SESSION_KEY,JSON.stringify(session));
       if (mountedRef.current) {
         setState({ session, isLoading: false, error: null });
       }
@@ -209,7 +221,8 @@ export function AuthProvider({ children }: PropsWithChildren) {
     setState((current) => ({ ...current, isLoading: true, error: null }));
 
     try {
-      const { error } = await getClient().auth.signOut();
+      const { error } = await getClient().auth.signOut({scope:"local"});
+      await authStorage.removeItem(OFFLINE_SESSION_KEY);
 
       if (error) {
         throw error;
