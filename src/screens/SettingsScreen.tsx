@@ -1,3 +1,4 @@
+import { StudySyncSettings } from "../components/StudySyncSettings";
 import { FREE_OPENROUTER_MODEL_ERROR, isFreeOpenRouterModel } from "../../supabase/functions/_shared/openrouter-policy";
 import { useEffect, useState } from "react";
 import { Platform, Switch, Text, TextInput, View } from "react-native";
@@ -81,6 +82,7 @@ export default function SettingsScreen() {
   return (
     <AppScreen>
       <ScreenHeader title="Settings" subtitle="Your math recognition providers" trailing={<ThemeToggleButton />} />
+      <StudySyncSettings />
       <SectionCard className="gap-3">
         <Text className="text-base leading-6 text-ink-900 dark:text-white">
           Enter your own API keys. Recognition sends your drawing and credentials through Memoraid’s authenticated relay
