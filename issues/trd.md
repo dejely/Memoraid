@@ -30,7 +30,7 @@ Bootstrap imports existing owner-scoped Supabase decks/cards/sessions/tests/revi
 
 ## Handwriting controls
 
-Raw ink is a separate local entity. Default outbox excludes ink. Explicit opt-in queues existing ink; disabling stops uploads. A separate cloud deletion action publishes ink tombstones while retaining local strokes. Answers and review metadata continue syncing. Draft ink follows the same rule.
+Raw ink is a separate local entity. Default outbox excludes ink. Explicit opt-in queues existing ink; disabling stops uploads. A separate cloud deletion RPC publishes owner-scoped ink tombstones and scrubs ink from operation receipts while retaining local strokes; an offline deletion request stays queued locally. Answers and review metadata continue syncing. Draft ink follows the same rule.
 
 ## Experimental recognition
 

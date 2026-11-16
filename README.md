@@ -1,6 +1,6 @@
 # Memoraid
 
-Memoraid is a Quizlet-style study app built with Expo for Android, iOS, and the web. Native builds retain their local `expo-sqlite` library, while the authenticated web build stores each user's private study data in Supabase and deploys as a static Expo Router app on Vercel.
+Memoraid is a Quizlet-style study app built with Expo for Android, iOS, and the web. Native and web clients use account-scoped local libraries (SQLite and IndexedDB) and synchronize private study data through Supabase. The web deploys as a static Expo Router app on Vercel.
 
 ## Stack
 
@@ -87,7 +87,7 @@ SQLite tables created on boot:
 - `review_stats`
 - `review_events`
 
-The native database is initialized in [`src/db/client.ts`](src/db/client.ts) and schema versioned in [`src/db/schema.ts`](src/db/schema.ts). The web repositories use the owner-scoped Supabase schema in [`supabase/migrations`](supabase/migrations).
+Shared repositories and account-scoped platform stores live in [`src/db/local`](src/db/local). The earlier native database remains available for explicit adoption. Supabase synchronization uses the additive migrations in [`supabase/migrations`](supabase/migrations).
 
 ## Future-Ready Layers
 
@@ -166,7 +166,7 @@ Notes:
 
 ## Web Deployment
 
-The web build is online-first and uses Supabase instead of browser SQLite. Each table is protected by row-level security and every query runs as the signed-in user. Native users can explicitly upload an existing local library once; local data is retained after the upload.
+Previously signed-in users can practice downloaded content offline. Web uses IndexedDB and a production service worker for static assets; native uses account-scoped SQLite. Supabase sync uses owner-scoped versioned operations, cursor pulls, idempotent review events and explicit conflict resolution. Native users can explicitly adopt their older shared device library in Settings. See [adaptive learning setup and rollout](docs/ADAPTIVE_LEARNING.md).
 
 The linked Vercel project is available at [memoraid-three.vercel.app](https://memoraid-three.vercel.app). It requires the two public Supabase environment variables and the included database migration before sign-in is enabled.
 
@@ -215,3 +215,7 @@ npm run web:build
 ```
 
 The browser export resolves `.web.ts` repository, database-bootstrap, preference, and file-reader implementations, so native-only SQLite and filesystem code are not included in the web bundle.
+
+### Practice and recognition performance
+
+Open the Practice tab for written cards, generated core statistics, and the mistake notebook. Draft answers and timestamped strokes save locally; handwriting upload is opt-in in Settings. API keys stay in their separate secure/session storage. The local-symbol lab stays experimental until real-device benchmark gates pass. See [recognition evaluation](benchmarks/README.md) and the [prioritized roadmap](issues/README.md).
