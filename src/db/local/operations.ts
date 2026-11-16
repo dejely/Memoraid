@@ -130,5 +130,6 @@ export async function resolveConflict(
       conflict.local.payload,
       conflict.local.deleted,
     );
+  if (conflict.local.kind === "review") await tx.remove("meta", "progress");
   await tx.remove("conflicts", key);
 }

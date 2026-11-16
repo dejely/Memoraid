@@ -1,6 +1,6 @@
 # Adaptive learning validation — 2026-11-17
 
-- Node behavioral suite: 49 passed.
+- Node behavioral suite: 50 passed.
 - TypeScript check passed.
 - Web production export passed; offline shell includes 41 static assets.
 - Android Hermes export passed. Physical Android/iOS UI behavior remains unverified.
@@ -11,3 +11,5 @@
 - Clean Chromium context: service worker controlled navigation returned HTTP 200 online and offline; a Practice draft value `123` restored after offline navigation. Initial redirect-response failure was reproduced and fixed, with a Node regression test.
 
 No cloud model default was changed and no local recognizer was promoted. Issue #16 remains open for at least 100 real held-out stylus samples, Chromium and physical Android evaluation, accuracy/latency thresholds and measured memory. See [benchmark procedure](../benchmarks/README.md).
+
+A final regression verifies that receiving a new review after a projection reset preserves rewards from older local events. Cached recognition feedback and corrected preview timing were also checked in Chromium without application console errors.

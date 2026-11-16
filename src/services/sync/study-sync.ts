@@ -32,7 +32,13 @@ async function runSync() {
         import("../../db/local/types").PendingOperation
       >("outbox"))
         if (op.kind === "ink") await tx.remove("outbox", op.key);
-      for (const conflict of await tx.all<import("../../db/local/types").Conflict>("conflicts")) if (conflict.local.kind === "ink") await tx.remove("conflicts", conflict.key);
+      for (const conflict of await tx.all<
+        import("../../db/local/types").Conflict
+      >("conflicts"))
+        if (conflict.local.kind === "ink") {
+          await tx.set("entities", conflict.key, conflict.remote);
+          await tx.remove("conflicts", conflict.key);
+        }
       await tx.set("meta", "deleteCloudInk", false);
     });
     await synchronize(store, {

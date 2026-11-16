@@ -1,3 +1,4 @@
+import { storedProjection } from "../../features/progress/persistence";
 import type {
   Deck,
   DeckDraft,
@@ -192,8 +193,7 @@ export async function addReview(
     grading_method: method,
   };
   await writeEntity(tx, "review", id, event);
-  const projection =
-    (await tx.get<ProgressProjection>("meta", "progress")) ?? {};
+  const projection = await storedProjection(tx);
   await tx.set("meta", "progress", projectEvent(projection, event));
 }
 export async function recordReview(

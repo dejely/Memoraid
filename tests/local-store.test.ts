@@ -189,3 +189,41 @@ test("JSON object key order from PostgreSQL does not create a false conflict", a
   );
   assert.equal((await store.transaction((tx) => tx.all("outbox"))).length, 0);
 });
+test("first sync after a projection reset preserves older review rewards", async () => {
+  const store = memory();
+  const review = (id: string) => ({
+    id,
+    card_id: id,
+    deck_id: "d",
+    happened_at: "2026-11-17T10:00:00Z",
+    study_date: "2026-11-17",
+    timezone: "UTC",
+    result: "correct",
+    was_due: false,
+    was_weak: false,
+    grading_method: "automatic",
+  });
+  await store.transaction((tx) =>
+    writeEntity(tx, "review", "old", review("old"), false, false),
+  );
+  const remoteEvent: Entity = {
+    key: "review:new",
+    id: "new",
+    kind: "review",
+    payload: review("new"),
+    deleted: false,
+    version: 1,
+  };
+  await synchronize(store, {
+    pull: async () => ({ changes: [remoteEvent], cursor: 1, more: false }),
+    push: async () => {
+      throw new Error("No pending operations");
+    },
+  });
+  const { readProjection } =
+    await import("../src/features/progress/projection");
+  const projection = await store.transaction((tx) =>
+    tx.get<any>("meta", "progress"),
+  );
+  assert.equal(readProjection(projection, "2026-11-17").xp, 30);
+});

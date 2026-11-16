@@ -1,3 +1,4 @@
+import { storedProjection } from "../../features/progress/persistence";
 import type {
   Entity,
   LocalStore,
@@ -43,8 +44,7 @@ export async function synchronize(store: LocalStore, transport: SyncTransport) {
             }
           }
           if (remote.kind === "review" && !remote.deleted) {
-            const projection =
-              (await tx.get<ProgressProjection>("meta", "progress")) ?? {};
+            const projection = await storedProjection(tx);
             await tx.set(
               "meta",
               "progress",
