@@ -28,7 +28,7 @@ export function MathContent({
     <div
       className={className}
       style={{
-        color: color ?? (theme.colorScheme === "dark" ? "#fff" : "#172136"),
+        color: color ?? theme.colors.foreground,
         whiteSpace: "pre-wrap",
         lineHeight: 1.7,
         overflowWrap: "anywhere",
