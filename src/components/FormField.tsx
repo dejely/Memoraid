@@ -1,3 +1,4 @@
+import { useThemeColors } from "./ThemeProvider";
 import { Text, TextInput, View } from "react-native";
 
 import { cn } from "../utils/classnames";
@@ -19,14 +20,17 @@ export function FormField({
   multiline = false,
   className,
 }: FormFieldProps) {
+  const themeColors = useThemeColors();
   return (
     <View className={cn("gap-2", className)}>
-      <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">{label}</Text>
+      <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">
+        {label}
+      </Text>
       <TextInput
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor="#6f88b7"
+        placeholderTextColor={themeColors.mutedForeground}
         multiline={multiline}
         textAlignVertical={multiline ? "top" : "center"}
         className={cn(

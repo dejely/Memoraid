@@ -1,6 +1,7 @@
+import { ThemedSwitch } from "./ThemedSwitch";
 import { exportRecognitionReport } from "../services/recognition/export-report";
 import { useEffect, useState } from "react";
-import { Platform, Switch, Text, View } from "react-native";
+import { Platform, Text, View } from "react-native";
 import { studyStore } from "../db/local/store";
 import { createId } from "../utils/ids";
 import type { Ink } from "../features/practice/ink";
@@ -93,7 +94,7 @@ export function LocalRecognitionLab() {
             onChangeText={setLabel}
           />
           <View className="flex-row gap-3 items-center">
-            <Switch value={stylus} onValueChange={setStylus} />
+            <ThemedSwitch value={stylus} onValueChange={setStylus} />
             <Text className="text-ink-900 dark:text-white">
               I drew this with a stylus on physical hardware
             </Text>

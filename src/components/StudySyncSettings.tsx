@@ -1,6 +1,7 @@
+import { ThemedSwitch } from "./ThemedSwitch";
 import { readInk } from "../features/practice/ink-storage";
 import { useEffect, useState } from "react";
-import { Switch, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { studyStore, studyChanged } from "../db/local/store";
 import { writeEntity, resolveConflict } from "../db/local/operations";
@@ -66,7 +67,7 @@ export function StudySyncSettings() {
         onPress={() => void action(syncStudy)}
       />
       <View className="flex-row items-center gap-3">
-        <Switch
+        <ThemedSwitch
           accessibilityLabel="Sync handwriting"
           disabled={busy}
           value={query.data?.ink ?? false}

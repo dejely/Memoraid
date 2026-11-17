@@ -5,14 +5,14 @@ import { PrimaryButton } from "./PrimaryButton";
 
 function getThemeLabel(preference: "system" | "light" | "dark"): string {
   if (preference === "system") {
-    return "Theme: System";
+    return "Mode: System";
   }
 
   if (preference === "dark") {
-    return "Theme: Dark";
+    return "Mode: Dark";
   }
 
-  return "Theme: Light";
+  return "Mode: Light";
 }
 
 export function ThemeToggleButton() {
@@ -23,7 +23,7 @@ export function ThemeToggleButton() {
       label={getThemeLabel(theme.preference)}
       variant="secondary"
       onPress={() => {
-        void theme.cyclePreference();
+        void theme.cyclePreference().catch(() => {});
       }}
       className="px-3"
       textClassName="text-xs"

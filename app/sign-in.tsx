@@ -1,16 +1,35 @@
+import { useThemeColors } from "../src/components/ThemeProvider";
 import { Redirect } from "expo-router";
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, Text, TextInput, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 
 import { AppScreen } from "../src/components/AppScreen";
 import { LoadingState } from "../src/components/LoadingState";
 import { PrimaryButton } from "../src/components/PrimaryButton";
 import { ScreenHeader } from "../src/components/ScreenHeader";
-import { MemoraidAuthError, toMemoraidAuthError } from "../src/services/auth/auth-errors";
+import {
+  MemoraidAuthError,
+  toMemoraidAuthError,
+} from "../src/services/auth/auth-errors";
 import { useAuth } from "../src/services/auth/AuthProvider";
 
 export default function SignInScreen() {
-  const { dismissError, error: sessionError, isLoading, retrySession, sendMagicLink, session } = useAuth();
+  const themeColors = useThemeColors();
+  const {
+    dismissError,
+    error: sessionError,
+    isLoading,
+    retrySession,
+    sendMagicLink,
+    session,
+  } = useAuth();
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [formError, setFormError] = useState<MemoraidAuthError | null>(null);
@@ -35,7 +54,9 @@ export default function SignInScreen() {
       const normalizedEmail = await sendMagicLink(email);
       setSentTo(normalizedEmail);
     } catch (error) {
-      setFormError(toMemoraidAuthError(error, "The magic link could not be sent."));
+      setFormError(
+        toMemoraidAuthError(error, "The magic link could not be sent."),
+      );
     } finally {
       setIsSending(false);
     }
@@ -66,7 +87,10 @@ export default function SignInScreen() {
 
           {visibleError ? (
             <View className="mt-5 rounded-2xl border border-rose-200 bg-rose-500/5 p-4 dark:border-rose-500/40">
-              <Text accessibilityRole="alert" className="text-sm font-semibold text-rose-500">
+              <Text
+                accessibilityRole="alert"
+                className="text-sm font-semibold text-rose-500"
+              >
                 {visibleError.message}
               </Text>
               {visibleError.kind === "network" ? (
@@ -78,7 +102,9 @@ export default function SignInScreen() {
                     void retrySession();
                   }}
                 >
-                  <Text className="text-sm font-semibold text-sea-700 dark:text-sea-300">Check again</Text>
+                  <Text className="text-sm font-semibold text-sea-700 dark:text-sea-300">
+                    Check again
+                  </Text>
                 </Pressable>
               ) : null}
             </View>
@@ -91,12 +117,18 @@ export default function SignInScreen() {
                 loading={isSending}
                 onPress={() => void handleSendMagicLink()}
               />
-              <PrimaryButton label="Use a different email" variant="secondary" onPress={editEmail} />
+              <PrimaryButton
+                label="Use a different email"
+                variant="secondary"
+                onPress={editEmail}
+              />
             </View>
           ) : (
             <View className="mt-6 gap-5">
               <View className="gap-2">
-                <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">Email address</Text>
+                <Text className="text-sm font-semibold text-ink-700 dark:text-ink-100">
+                  Email address
+                </Text>
                 <TextInput
                   accessibilityLabel="Email address"
                   autoCapitalize="none"
@@ -105,7 +137,7 @@ export default function SignInScreen() {
                   inputMode="email"
                   keyboardType="email-address"
                   placeholder="you@example.com"
-                  placeholderTextColor="#6f88b7"
+                  placeholderTextColor={themeColors.mutedForeground}
                   returnKeyType="send"
                   value={email}
                   onChangeText={(value) => {
@@ -126,7 +158,8 @@ export default function SignInScreen() {
           )}
 
           <Text className="mt-6 text-xs leading-5 text-ink-500 dark:text-ink-300">
-            Your browser or device keeps a sign-in session so your private study data can sync across devices.
+            Your browser or device keeps a sign-in session so your private study
+            data can sync across devices.
           </Text>
         </View>
       </KeyboardAvoidingView>

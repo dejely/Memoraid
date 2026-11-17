@@ -1,3 +1,4 @@
+import { useThemeColors } from "./ThemeProvider";
 import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import type { ReactNode } from "react";
 
@@ -24,6 +25,7 @@ export function PrimaryButton({
   textClassName,
   icon,
 }: PrimaryButtonProps) {
+  const colors = useThemeColors();
   const isDisabled = disabled || loading;
 
   return (
@@ -34,25 +36,33 @@ export function PrimaryButton({
       style={{ opacity: isDisabled ? 0.55 : 1 }}
       className={cn(
         "min-h-12 flex-row items-center justify-center gap-2 rounded-2xl px-4",
-        variant === "primary" && "bg-ink-900 dark:bg-sea-500",
-        variant === "secondary" && "border border-ink-200 bg-white dark:border-ink-600 dark:bg-ink-700",
+        variant === "primary" && "bg-primary",
+        variant === "secondary" && "border border-border bg-secondary",
         variant === "ghost" && "bg-transparent",
-        variant === "danger" && "bg-rose-500",
+        variant === "danger" && "bg-danger",
         className,
       )}
     >
       {loading ? (
-        <ActivityIndicator color={variant === "secondary" || variant === "ghost" ? "#172136" : "#ffffff"} />
+        <ActivityIndicator
+          color={
+            variant === "primary"
+              ? colors.primaryForeground
+              : variant === "danger"
+                ? colors.dangerForeground
+                : colors.secondaryForeground
+          }
+        />
       ) : (
         <>
           {icon ? <View>{icon}</View> : null}
           <Text
             className={cn(
               "text-center text-sm font-semibold",
-              variant === "primary" && "text-white",
-              variant === "secondary" && "text-ink-900 dark:text-white",
-              variant === "ghost" && "text-sea-700 dark:text-sea-300",
-              variant === "danger" && "text-white",
+              variant === "primary" && "text-primary-foreground",
+              variant === "secondary" && "text-secondary-foreground",
+              variant === "ghost" && "text-foreground",
+              variant === "danger" && "text-danger-foreground",
               textClassName,
             )}
           >

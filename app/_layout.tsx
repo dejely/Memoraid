@@ -1,6 +1,10 @@
 import "../global.css";
 
-import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  MutationCache,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { Stack } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Text, View } from "react-native";
@@ -28,7 +32,7 @@ function RootNavigator() {
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: theme.colorScheme === "dark" ? "#0b1220" : "#f5f7fb" },
+          contentStyle: { backgroundColor: theme.colors.background },
         }}
       >
         <Stack.Screen name="(tabs)" />
@@ -45,12 +49,20 @@ function RootNavigator() {
 }
 
 function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
-  const { dismissError, error, isLoading, retrySession, session, user } = useAuth();
+  const { dismissError, error, isLoading, retrySession, session, user } =
+    useAuth();
   const userId = user?.id ?? null;
   const [preparedUserId, setPreparedUserId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (Platform.OS === "web" && process.env.NODE_ENV === "production" && "serviceWorker" in navigator) void navigator.serviceWorker.register("/sw.js", { updateViaCache: "none" }).catch(() => {});
+    if (
+      Platform.OS === "web" &&
+      process.env.NODE_ENV === "production" &&
+      "serviceWorker" in navigator
+    )
+      void navigator.serviceWorker
+        .register("/sw.js", { updateViaCache: "none" })
+        .catch(() => {});
     queryClient.clear();
     clearRecognitionCache();
     setStudyAccount(userId);
@@ -64,12 +76,22 @@ function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
     const unsubscribe = onStudyChange(() => {
       if (active) void queryClient.invalidateQueries();
     });
-    const sync = () => { void syncStudy().catch(() => {}); };
+    const sync = () => {
+      void syncStudy().catch(() => {});
+    };
     sync();
     const timer = setInterval(sync, 30000);
-    const listener = AppState.addEventListener('change', state => { if (state === 'active') sync(); });
-    if (Platform.OS === 'web') window.addEventListener('online',sync);
-    return () => { active=false; unsubscribe(); clearInterval(timer); listener.remove(); if (Platform.OS==='web') window.removeEventListener('online',sync); };
+    const listener = AppState.addEventListener("change", (state) => {
+      if (state === "active") sync();
+    });
+    if (Platform.OS === "web") window.addEventListener("online", sync);
+    return () => {
+      active = false;
+      unsubscribe();
+      clearInterval(timer);
+      listener.remove();
+      if (Platform.OS === "web") window.removeEventListener("online", sync);
+    };
   }, [userId, preparedUserId, queryClient]);
 
   if (isLoading || (userId && preparedUserId !== userId)) {
@@ -80,7 +102,9 @@ function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
     return (
       <AuthErrorState
         error={error}
-        onRetry={error.kind === "configuration" ? undefined : () => void retrySession()}
+        onRetry={
+          error.kind === "configuration" ? undefined : () => void retrySession()
+        }
         onDismiss={session ? dismissError : undefined}
       />
     );
@@ -123,17 +147,30 @@ export default function RootLayout() {
     return (
       <AppScreen scroll={false} className="items-center justify-center">
         <View className="w-full max-w-md rounded-[32px] border border-rose-200 bg-white p-6 dark:border-rose-500/40 dark:bg-ink-800">
-          <Text className="text-sm font-semibold uppercase tracking-[2px] text-rose-500">Initialization error</Text>
-          <Text className="mt-3 text-2xl font-bold text-ink-900 dark:text-white">The local study database could not start.</Text>
-          <Text className="mt-3 text-sm leading-6 text-ink-600 dark:text-ink-200">{bootstrap.error}</Text>
-          <PrimaryButton className="mt-6" label="Close and reopen the app" variant="secondary" />
+          <Text className="text-sm font-semibold uppercase tracking-[2px] text-rose-500">
+            Initialization error
+          </Text>
+          <Text className="mt-3 text-2xl font-bold text-ink-900 dark:text-white">
+            The local study database could not start.
+          </Text>
+          <Text className="mt-3 text-sm leading-6 text-ink-600 dark:text-ink-200">
+            {bootstrap.error}
+          </Text>
+          <PrimaryButton
+            className="mt-6"
+            label="Close and reopen the app"
+            variant="secondary"
+          />
         </View>
       </AppScreen>
     );
   }
 
   return (
-    <ThemeProvider initialPreference={bootstrap.themePreference}>
+    <ThemeProvider
+      initialPreference={bootstrap.themePreference}
+      initialPalette={bootstrap.themePalette}
+    >
       <QueryClientProvider client={queryClient}>
         <AuthProvider>
           <SessionBoundary queryClient={queryClient} />
