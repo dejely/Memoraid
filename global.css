@@ -1,3 +1,47 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Classic fallbacks cover bootstrap screens before appearance preferences load. */
+@layer base {
+  :root {
+    --color-background: 245 247 251;
+    --color-foreground: 23 33 54;
+    --color-card: 255 255 255;
+    --color-primary: 11 18 32;
+    --color-primary-foreground: 255 255 255;
+    --color-secondary: 241 251 250;
+    --color-secondary-foreground: 20 102 96;
+    --color-muted: 232 237 246;
+    --color-muted-foreground: 60 81 121;
+    --color-accent: 212 244 241;
+    --color-accent-foreground: 20 102 96;
+    --color-border: 203 214 234;
+    --color-input: 255 255 255;
+    --color-ring: 27 159 147;
+    --color-danger: 209 93 118;
+    --color-danger-foreground: 26 26 26;
+    --color-danger-ink: 172 81 105;
+    --color-ink-50: 245 247 251;
+    --color-ink-100: 232 237 246;
+    --color-ink-200: 203 214 234;
+    --color-ink-300: 60 81 121;
+    --color-ink-400: 60 81 121;
+    --color-ink-500: 60 81 121;
+    --color-ink-600: 60 81 121;
+    --color-ink-700: 23 33 54;
+    --color-ink-800: 23 33 54;
+    --color-ink-900: 23 33 54;
+    --color-sea-50: 231 233 238;
+    --color-sea-100: 217 220 225;
+    --color-sea-200: 187 190 196;
+    --color-sea-300: 128 133 142;
+    --color-sea-400: 11 18 32;
+    --color-sea-500: 11 18 32;
+    --color-sea-600: 11 18 32;
+    --color-sea-700: 11 18 32;
+    --color-sea-800: 11 18 32;
+    --color-sea-900: 11 18 32;
+    --color-paper: 255 255 255;
+  }
+}

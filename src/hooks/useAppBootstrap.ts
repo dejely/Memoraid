@@ -1,3 +1,4 @@
+import type { ThemePalette } from "../theme/palettes";
 import { useEffect, useState } from "react";
 
 import { initializeDatabase } from "../db/client";
@@ -6,6 +7,7 @@ import {
   getBootstrapMeta,
   loadBackendConfig,
   loadThemePreference,
+  loadThemePalette,
   markBootstrapComplete,
 } from "../services/secure/preferences-service";
 import type { BackendConfig, ThemePreference } from "../types/models";
@@ -16,6 +18,7 @@ type BootstrapState = {
   backendConfig: BackendConfig | null;
   bootstrapMeta: { version: number; completedAt: string } | null;
   themePreference: ThemePreference;
+  themePalette: ThemePalette;
 };
 
 export function useAppBootstrap(): BootstrapState {
@@ -25,6 +28,7 @@ export function useAppBootstrap(): BootstrapState {
     backendConfig: null,
     bootstrapMeta: null,
     themePreference: "system",
+    themePalette: "classic",
   });
 
   useEffect(() => {
@@ -34,11 +38,13 @@ export function useAppBootstrap(): BootstrapState {
       try {
         await initializeDatabase();
         await markBootstrapComplete(LATEST_DB_VERSION);
-        const [backendConfig, bootstrapMeta, themePreference] = await Promise.all([
-          loadBackendConfig(),
-          getBootstrapMeta(),
-          loadThemePreference(),
-        ]);
+        const [backendConfig, bootstrapMeta, themePreference, themePalette] =
+          await Promise.all([
+            loadBackendConfig(),
+            getBootstrapMeta(),
+            loadThemePreference(),
+            loadThemePalette(),
+          ]);
 
         if (!isMounted) {
           return;
@@ -50,6 +56,7 @@ export function useAppBootstrap(): BootstrapState {
           backendConfig,
           bootstrapMeta,
           themePreference,
+          themePalette,
         });
       } catch (error) {
         if (!isMounted) {
@@ -58,10 +65,14 @@ export function useAppBootstrap(): BootstrapState {
 
         setState({
           isReady: false,
-          error: error instanceof Error ? error.message : "Failed to initialize the app.",
+          error:
+            error instanceof Error
+              ? error.message
+              : "Failed to initialize the app.",
           backendConfig: null,
           bootstrapMeta: null,
           themePreference: "system",
+          themePalette: "classic",
         });
       }
     }
