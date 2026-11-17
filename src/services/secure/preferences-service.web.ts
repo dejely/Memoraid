@@ -1,3 +1,4 @@
+import { decodeThemePalette, type ThemePalette } from "../../theme/palettes";
 import type { BackendConfig, ThemePreference } from "../../types/models";
 
 const BACKEND_CONFIG_KEY = "quiztography.backend-config";
@@ -14,7 +15,9 @@ export const DEFAULT_THEME_PREFERENCE: ThemePreference = "system";
 
 function read(key: string): string | null {
   try {
-    return typeof window === "undefined" ? null : window.localStorage.getItem(key);
+    return typeof window === "undefined"
+      ? null
+      : window.localStorage.getItem(key);
   } catch {
     return null;
   }
@@ -51,10 +54,14 @@ export async function saveBackendConfig(value: BackendConfig): Promise<void> {
 
 export async function loadThemePreference(): Promise<ThemePreference> {
   const value = read(THEME_PREFERENCE_KEY);
-  return value === "light" || value === "dark" || value === "system" ? value : DEFAULT_THEME_PREFERENCE;
+  return value === "light" || value === "dark" || value === "system"
+    ? value
+    : DEFAULT_THEME_PREFERENCE;
 }
 
-export async function saveThemePreference(value: ThemePreference): Promise<void> {
+export async function saveThemePreference(
+  value: ThemePreference,
+): Promise<void> {
   write(THEME_PREFERENCE_KEY, value);
 }
 
@@ -68,7 +75,10 @@ export async function markBootstrapComplete(version: number): Promise<void> {
   );
 }
 
-export async function getBootstrapMeta(): Promise<{ version: number; completedAt: string } | null> {
+export async function getBootstrapMeta(): Promise<{
+  version: number;
+  completedAt: string;
+} | null> {
   const value = read(BOOTSTRAP_META_KEY);
 
   if (!value) {
@@ -82,3 +92,9 @@ export async function getBootstrapMeta(): Promise<{ version: number; completedAt
   }
 }
 
+export async function loadThemePalette(): Promise<ThemePalette> {
+  return decodeThemePalette(read("memoraid.theme-palette"));
+}
+export async function saveThemePalette(value: ThemePalette): Promise<void> {
+  write("memoraid.theme-palette", value);
+}

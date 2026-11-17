@@ -11,7 +11,10 @@ import { EmptyState } from "../components/EmptyState";
 import { LoadingState } from "../components/LoadingState";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
-import { useActivityHistory, useTestHistory } from "../features/dashboard/hooks";
+import {
+  useActivityHistory,
+  useTestHistory,
+} from "../features/dashboard/hooks";
 import { formatDateTime } from "../utils/date";
 
 export default function HistoryScreen() {
@@ -25,7 +28,9 @@ export default function HistoryScreen() {
   const testHistoryQuery = useTestHistory();
 
   if (activityQuery.isLoading || testHistoryQuery.isLoading) {
-    return <LoadingState message="Loading study activity and saved test attempts..." />;
+    return (
+      <LoadingState message="Loading study activity and saved test attempts..." />
+    );
   }
 
   if (activityQuery.isError || testHistoryQuery.isError) {
@@ -42,7 +47,9 @@ export default function HistoryScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow={Platform.OS === "web" ? "Saved to your account" : "Saved locally"}
+        eyebrow={
+          Platform.OS === "web" ? "Saved to your account" : "Saved locally"
+        }
         title="History"
         subtitle={
           Platform.OS === "web"
@@ -52,7 +59,9 @@ export default function HistoryScreen() {
       />
 
       <View className="gap-3">
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">Study activity</Text>
+        <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+          Study activity
+        </Text>
         {(activityQuery.data ?? []).length === 0 ? (
           <EmptyState
             title="No study activity yet"
@@ -64,8 +73,12 @@ export default function HistoryScreen() {
               <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">
                 {item.type}
               </Text>
-              <Text className="text-xl font-semibold text-ink-900 dark:text-white">{item.title}</Text>
-              <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{item.subtitle}</Text>
+              <Text className="text-xl font-semibold text-ink-900 dark:text-white">
+                {item.title}
+              </Text>
+              <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+                {item.subtitle}
+              </Text>
               <Text className="text-xs font-medium text-ink-500 dark:text-ink-300">
                 {formatDateTime(item.happenedAt)}
               </Text>
@@ -75,7 +88,9 @@ export default function HistoryScreen() {
       </View>
 
       <View className="gap-3">
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">Test attempts</Text>
+        <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+          Test attempts
+        </Text>
         {(testHistoryQuery.data ?? []).length === 0 ? (
           <EmptyState
             title="No saved tests yet"
@@ -85,13 +100,18 @@ export default function HistoryScreen() {
           (testHistoryQuery.data ?? []).map((attempt) => (
             <SectionCard key={attempt.id} className="gap-2">
               <View className="flex-row items-center justify-between">
-                <Text className="text-lg font-semibold text-ink-900 dark:text-white">{attempt.deckTitle}</Text>
-                <View className="rounded-full bg-ink-900 px-3 py-2 dark:bg-sea-500">
-                  <Text className="text-sm font-semibold text-white">{attempt.scorePercent}%</Text>
+                <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+                  {attempt.deckTitle}
+                </Text>
+                <View className="rounded-full bg-primary px-3 py-2">
+                  <Text className="text-sm font-semibold text-primary-foreground">
+                    {attempt.scorePercent}%
+                  </Text>
                 </View>
               </View>
               <Text className="text-sm text-ink-600 dark:text-ink-200">
-                Objective: {attempt.objectiveCorrect}/{attempt.objectiveTotal} · Written: {attempt.writtenCount}
+                Objective: {attempt.objectiveCorrect}/{attempt.objectiveTotal} ·
+                Written: {attempt.writtenCount}
               </Text>
               <Text className="text-sm text-ink-600 dark:text-ink-200">
                 {attempt.weakCardCount} weak cards identified
@@ -100,25 +120,47 @@ export default function HistoryScreen() {
                 {formatDateTime(attempt.finishedAt)}
               </Text>
               <PrimaryButton
-                label={selectedAttempt === attempt.id ? "Hide answers" : "Review answers"}
+                label={
+                  selectedAttempt === attempt.id
+                    ? "Hide answers"
+                    : "Review answers"
+                }
                 variant="secondary"
-                onPress={() => setSelectedAttempt(selectedAttempt === attempt.id ? null : attempt.id)}
+                onPress={() =>
+                  setSelectedAttempt(
+                    selectedAttempt === attempt.id ? null : attempt.id,
+                  )
+                }
               />
               {selectedAttempt === attempt.id ? (
                 <View className="gap-3">
                   {details.isLoading ? (
-                    <Text className="text-ink-600 dark:text-ink-200">Loading answers…</Text>
+                    <Text className="text-ink-600 dark:text-ink-200">
+                      Loading answers…
+                    </Text>
                   ) : details.isError ? (
-                    <PrimaryButton label="Retry answers" onPress={() => void details.refetch()} />
+                    <PrimaryButton
+                      label="Retry answers"
+                      onPress={() => void details.refetch()}
+                    />
                   ) : (
                     details.data?.map((question) => (
                       <View key={question.id} className="gap-2">
-                        <MathContent className="text-lg text-ink-900 dark:text-white">{question.prompt}</MathContent>
+                        <MathContent className="text-lg text-ink-900 dark:text-white">
+                          {question.prompt}
+                        </MathContent>
                         <MathContent className="text-ink-600 dark:text-ink-200">{`Your answer: ${question.selectedAnswer ?? "No answer"}`}</MathContent>
                         <MathContent className="text-ink-900 dark:text-white">{`Expected: ${question.correctAnswer}`}</MathContent>
                         <Text className="text-sm text-ink-600 dark:text-ink-200">
-                          {question.isCorrect === null ? "Unmarked" : question.isCorrect ? "Correct" : "Needs review"} ·{" "}
-                          {question.gradingMethod === "automatic" ? "Automatically marked" : "Self-reviewed"}
+                          {question.isCorrect === null
+                            ? "Unmarked"
+                            : question.isCorrect
+                              ? "Correct"
+                              : "Needs review"}{" "}
+                          ·{" "}
+                          {question.gradingMethod === "automatic"
+                            ? "Automatically marked"
+                            : "Self-reviewed"}
                         </Text>
                       </View>
                     ))

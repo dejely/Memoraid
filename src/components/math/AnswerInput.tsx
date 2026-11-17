@@ -1,3 +1,4 @@
+import { useThemeColors } from "../ThemeProvider";
 import type { Ink } from "../../features/practice/ink";
 import { useEffect, useRef, useState } from "react";
 import { Modal, ScrollView, Text, TextInput, View } from "react-native";
@@ -27,6 +28,7 @@ export function AnswerInput({
   onInkChange?: (ink: Ink) => void;
   onConfirmed?: (original: string, confirmed: string) => void;
 }) {
+  const themeColors = useThemeColors();
   const [mode, setMode] = useState<"text" | "editor" | "draw">("text");
   const ink = useRef<Ink | undefined>(initialInk);
   const transcription = useRef("");
@@ -160,7 +162,7 @@ export function AnswerInput({
           value={value}
           onChangeText={onChangeText}
           placeholder="Type your answer…"
-          placeholderTextColor="#6f88b7"
+          placeholderTextColor={themeColors.mutedForeground}
           className="min-h-28 rounded-2xl border border-ink-200 p-4 text-base text-ink-900 dark:text-white"
         />
       ) : (

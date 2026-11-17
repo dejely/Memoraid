@@ -1,8 +1,14 @@
+import { ThemedSwitch } from "../components/ThemedSwitch";
+import { useThemeColors } from "../components/ThemeProvider";
+import { AppearanceSettings } from "../components/AppearanceSettings";
 import { LocalRecognitionLab } from "../components/LocalRecognitionLab";
 import { StudySyncSettings } from "../components/StudySyncSettings";
-import { FREE_OPENROUTER_MODEL_ERROR, isFreeOpenRouterModel } from "../../supabase/functions/_shared/openrouter-policy";
+import {
+  FREE_OPENROUTER_MODEL_ERROR,
+  isFreeOpenRouterModel,
+} from "../../supabase/functions/_shared/openrouter-policy";
 import { useEffect, useState } from "react";
-import { Platform, Switch, Text, TextInput, View } from "react-native";
+import { Platform, Text, TextInput, View } from "react-native";
 import { AppScreen } from "../components/AppScreen";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
@@ -10,11 +16,19 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { FormField } from "../components/FormField";
 import { ThemeToggleButton } from "../components/ThemeToggleButton";
 import { useAuth } from "../services/auth/AuthProvider";
-import { DEFAULT_AI_SETTINGS, EMPTY_CREDENTIALS, type AiProvider } from "../services/ai/config";
-import { loadAiConfiguration, saveAiConfiguration } from "../services/secure/ai-storage";
+import {
+  DEFAULT_AI_SETTINGS,
+  EMPTY_CREDENTIALS,
+  type AiProvider,
+} from "../services/ai/config";
+import {
+  loadAiConfiguration,
+  saveAiConfiguration,
+} from "../services/secure/ai-storage";
 import { callAiRelay } from "../services/ai/client";
 
 export default function SettingsScreen() {
+  const themeColors = useThemeColors();
   const { user } = useAuth();
   const [settings, setSettings] = useState({ ...DEFAULT_AI_SETTINGS });
   const [credentials, setCredentials] = useState({ ...EMPTY_CREDENTIALS });
@@ -35,7 +49,10 @@ export default function SettingsScreen() {
           }
         })
         .catch(() => {
-          if (active) setMessage("Settings could not be loaded. Reopen Settings to retry.");
+          if (active)
+            setMessage(
+              "Settings could not be loaded. Reopen Settings to retry.",
+            );
         });
     return () => {
       active = false;
@@ -55,7 +72,9 @@ export default function SettingsScreen() {
       });
       setMessage("Settings saved on this device.");
     } catch {
-      setMessage("Settings could not be saved. Check device storage permissions.");
+      setMessage(
+        "Settings could not be saved. Check device storage permissions.",
+      );
     } finally {
       setBusy(false);
     }
@@ -82,14 +101,20 @@ export default function SettingsScreen() {
   }
   return (
     <AppScreen>
-      <ScreenHeader title="Settings" subtitle="Your math recognition providers" trailing={<ThemeToggleButton />} />
+      <ScreenHeader
+        title="Settings"
+        subtitle="Appearance, offline library, and recognition providers"
+        trailing={<ThemeToggleButton />}
+      />
+      <AppearanceSettings />
       <StudySyncSettings />
       <LocalRecognitionLab />
       <SectionCard className="gap-3">
         <Text className="text-base leading-6 text-ink-900 dark:text-white">
-          Enter your own API keys. Recognition sends your drawing and credentials through Memoraid’s authenticated relay
-          to the selected provider. Keys are never saved on the server. OpenRouter uses free models only; Gemini usage
-          charges may apply.
+          Enter your own API keys. Recognition sends your drawing and
+          credentials through Memoraid’s authenticated relay to the selected
+          provider. Keys are never saved on the server. OpenRouter uses free
+          models only; Gemini usage charges may apply.
         </Text>
         <Text className="text-sm text-ink-600 dark:text-ink-200">
           {Platform.OS === "web"
@@ -101,7 +126,9 @@ export default function SettingsScreen() {
       {(["gemini", "openrouter"] as const).map((provider) => (
         <SectionCard key={provider} className="gap-3">
           <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-            {provider === "gemini" ? "Gemini · primary" : "OpenRouter · free models only"}
+            {provider === "gemini"
+              ? "Gemini · primary"
+              : "OpenRouter · free models only"}
           </Text>
           <TextInput
             accessibilityLabel={`${provider} API key`}
@@ -109,25 +136,33 @@ export default function SettingsScreen() {
             autoCapitalize="none"
             autoCorrect={false}
             value={credentials[provider]}
-            onChangeText={(value) => setCredentials((current) => ({ ...current, [provider]: value }))}
+            onChangeText={(value) =>
+              setCredentials((current) => ({ ...current, [provider]: value }))
+            }
             placeholder="API key"
-            placeholderTextColor="#6f88b7"
+            placeholderTextColor={themeColors.mutedForeground}
             className="rounded-2xl border border-ink-200 p-4 text-ink-900 dark:text-white"
           />
           <FormField
             label="Model ID"
-            value={provider === "gemini" ? settings.geminiModel : settings.openrouterModel}
+            value={
+              provider === "gemini"
+                ? settings.geminiModel
+                : settings.openrouterModel
+            }
             onChangeText={(value) =>
               setSettings((current) => ({
                 ...current,
-                [provider === "gemini" ? "geminiModel" : "openrouterModel"]: value.trim(),
+                [provider === "gemini" ? "geminiModel" : "openrouterModel"]:
+                  value.trim(),
               }))
             }
           />
           {provider === "openrouter" ? (
             <Text className="text-sm text-ink-600 dark:text-ink-200">
-              Use openrouter/free to select a free model automatically, or an image-capable model ending in :free. Free
-              models have usage limits; paid models are blocked.
+              Use openrouter/free to select a free model automatically, or an
+              image-capable model ending in :free. Free models have usage
+              limits; paid models are blocked.
             </Text>
           ) : null}
           <View className="flex-row gap-2">
@@ -155,16 +190,26 @@ export default function SettingsScreen() {
         </SectionCard>
       ))}
       <View className="flex-row items-center gap-4">
-        <Switch
+        <ThemedSwitch
           accessibilityLabel="Automatic provider fallback"
           value={settings.fallbackEnabled}
-          onValueChange={(value) => setSettings((current) => ({ ...current, fallbackEnabled: value }))}
+          onValueChange={(value) =>
+            setSettings((current) => ({ ...current, fallbackEnabled: value }))
+          }
         />
         <Text className="text-ink-900 dark:text-white">Automatic fallback</Text>
       </View>
-      <PrimaryButton label="Save settings" disabled={!ready} loading={busy} onPress={() => void save()} />
+      <PrimaryButton
+        label="Save settings"
+        disabled={!ready}
+        loading={busy}
+        onPress={() => void save()}
+      />
       {message ? (
-        <Text accessibilityRole="alert" className="text-ink-900 dark:text-white">
+        <Text
+          accessibilityRole="alert"
+          className="text-ink-900 dark:text-white"
+        >
           {message}
         </Text>
       ) : null}

@@ -1,3 +1,4 @@
+import { decodeThemePalette, type ThemePalette } from "../../theme/palettes";
 import * as SecureStore from "expo-secure-store";
 
 import type { BackendConfig, ThemePreference } from "../../types/models";
@@ -39,7 +40,11 @@ export async function saveBackendConfig(value: BackendConfig): Promise<void> {
 export async function loadThemePreference(): Promise<ThemePreference> {
   const storedValue = await SecureStore.getItemAsync(THEME_PREFERENCE_KEY);
 
-  if (storedValue === "light" || storedValue === "dark" || storedValue === "system") {
+  if (
+    storedValue === "light" ||
+    storedValue === "dark" ||
+    storedValue === "system"
+  ) {
     return storedValue;
   }
 
@@ -47,7 +52,9 @@ export async function loadThemePreference(): Promise<ThemePreference> {
   return DEFAULT_THEME_PREFERENCE;
 }
 
-export async function saveThemePreference(value: ThemePreference): Promise<void> {
+export async function saveThemePreference(
+  value: ThemePreference,
+): Promise<void> {
   await SecureStore.setItemAsync(THEME_PREFERENCE_KEY, value);
 }
 
@@ -61,7 +68,10 @@ export async function markBootstrapComplete(version: number): Promise<void> {
   );
 }
 
-export async function getBootstrapMeta(): Promise<{ version: number; completedAt: string } | null> {
+export async function getBootstrapMeta(): Promise<{
+  version: number;
+  completedAt: string;
+} | null> {
   const rawValue = await SecureStore.getItemAsync(BOOTSTRAP_META_KEY);
 
   if (!rawValue) {
@@ -73,4 +83,13 @@ export async function getBootstrapMeta(): Promise<{ version: number; completedAt
   } catch {
     return null;
   }
+}
+
+export async function loadThemePalette(): Promise<ThemePalette> {
+  return decodeThemePalette(
+    await SecureStore.getItemAsync("memoraid.theme-palette"),
+  );
+}
+export async function saveThemePalette(value: ThemePalette): Promise<void> {
+  await SecureStore.setItemAsync("memoraid.theme-palette", value);
 }

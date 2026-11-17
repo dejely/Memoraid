@@ -15,7 +15,7 @@ export function StatTile({
     <SectionCard
       className={[
         "flex-1 gap-2",
-        tone === "sea" ? "bg-sea-900" : "",
+        tone === "sea" ? "bg-secondary" : "",
         tone === "amber" ? "bg-amber-500" : "",
       ]
         .filter(Boolean)
@@ -24,12 +24,25 @@ export function StatTile({
       <Text
         className={[
           "text-xs font-medium uppercase tracking-[1.5px]",
-          tone === "ink" ? "text-ink-500 dark:text-ink-300" : "text-white/70",
+          tone === "sea"
+            ? "text-secondary-foreground"
+            : tone === "ink"
+              ? "text-ink-500 dark:text-ink-300"
+              : "text-ink-900",
         ].join(" ")}
       >
         {label}
       </Text>
-      <Text className={["text-2xl font-bold", tone === "ink" ? "text-ink-900 dark:text-white" : "text-white"].join(" ")}>
+      <Text
+        className={[
+          "text-2xl font-bold",
+          tone === "sea"
+            ? "text-secondary-foreground"
+            : tone === "ink"
+              ? "text-ink-900 dark:text-white"
+              : "text-ink-900",
+        ].join(" ")}
+      >
         {value}
       </Text>
     </SectionCard>
