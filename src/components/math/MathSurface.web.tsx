@@ -62,6 +62,7 @@ export function MathSurface({ config: input, onMessage }: MathSurfaceProps) {
         height: Math.max(SURFACE_MIN_HEIGHT[config.mode], height),
         border: 0,
         background: "transparent",
+        colorScheme: config.colorScheme,
       }}
     />
   );

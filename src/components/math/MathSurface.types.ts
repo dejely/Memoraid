@@ -7,6 +7,7 @@ export interface SurfaceConfig {
   locked?: boolean;
   busy?: boolean;
   color?: string;
+  colorScheme?: "light" | "dark";
   palette?: ThemeColors;
 }
 export type SurfaceMessage =

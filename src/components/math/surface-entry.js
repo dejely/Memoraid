@@ -73,6 +73,11 @@ function setup(next) {
   const reset = config.mode !== next.mode;
   config = next;
   document.body.style.color = next.color || "#172136";
+  document.documentElement.style.colorScheme = next.colorScheme || "light";
+  const background =
+    next.mode === "render" ? "transparent" : next.palette?.card || "#fff";
+  document.documentElement.style.backgroundColor = background;
+  document.body.style.backgroundColor = background;
   if (next.palette) {
     for (const [key, value] of Object.entries(next.palette))
       document.documentElement.style.setProperty("--surface-" + key, value);
