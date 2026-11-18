@@ -1,3 +1,5 @@
+import { SignOutButton } from "../components/auth/SignOutButton";
+import { SegmentedControl } from "../components/SegmentedControl";
 import { ThemedSwitch } from "../components/ThemedSwitch";
 import { useThemeColors } from "../components/ThemeProvider";
 import { AppearanceSettings } from "../components/AppearanceSettings";
@@ -29,6 +31,7 @@ import { callAiRelay } from "../services/ai/client";
 
 export default function SettingsScreen() {
   const themeColors = useThemeColors();
+  const [section, setSection] = useState("appearance");
   const { user } = useAuth();
   const [settings, setSettings] = useState({ ...DEFAULT_AI_SETTINGS });
   const [credentials, setCredentials] = useState({ ...EMPTY_CREDENTIALS });
@@ -103,108 +106,166 @@ export default function SettingsScreen() {
     <AppScreen>
       <ScreenHeader
         title="Settings"
-        subtitle="Appearance, offline library, and recognition providers"
+        eyebrow="Make it yours"
+        subtitle="A study space that works the way you do."
         trailing={<ThemeToggleButton />}
       />
-      <AppearanceSettings />
-      <StudySyncSettings />
-      <LocalRecognitionLab />
-      <SectionCard className="gap-3">
-        <Text className="text-base leading-6 text-ink-900 dark:text-white">
-          Enter your own API keys. Recognition sends your drawing and
-          credentials through Memoraid’s authenticated relay to the selected
-          provider. Keys are never saved on the server. OpenRouter uses free
-          models only; Gemini usage charges may apply.
-        </Text>
-        <Text className="text-sm text-ink-600 dark:text-ink-200">
-          {Platform.OS === "web"
-            ? "Keys stay in this tab’s session and clear when you sign out or close it."
-            : "Keys are kept in secure storage for this account on this device."}{" "}
-          Math entry and self-review work without keys.
-        </Text>
-      </SectionCard>
-      {(["gemini", "openrouter"] as const).map((provider) => (
-        <SectionCard key={provider} className="gap-3">
-          <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-            {provider === "gemini"
-              ? "Gemini · primary"
-              : "OpenRouter · free models only"}
-          </Text>
-          <TextInput
-            accessibilityLabel={`${provider} API key`}
-            secureTextEntry
-            autoCapitalize="none"
-            autoCorrect={false}
-            value={credentials[provider]}
-            onChangeText={(value) =>
-              setCredentials((current) => ({ ...current, [provider]: value }))
-            }
-            placeholder="API key"
-            placeholderTextColor={themeColors.mutedForeground}
-            className="rounded-2xl border border-ink-200 p-4 text-ink-900 dark:text-white"
-          />
-          <FormField
-            label="Model ID"
-            value={
-              provider === "gemini"
-                ? settings.geminiModel
-                : settings.openrouterModel
-            }
-            onChangeText={(value) =>
-              setSettings((current) => ({
-                ...current,
-                [provider === "gemini" ? "geminiModel" : "openrouterModel"]:
-                  value.trim(),
-              }))
-            }
-          />
-          {provider === "openrouter" ? (
-            <Text className="text-sm text-ink-600 dark:text-ink-200">
-              Use openrouter/free to select a free model automatically, or an
-              image-capable model ending in :free. Free models have usage
-              limits; paid models are blocked.
-            </Text>
-          ) : null}
-          <View className="flex-row gap-2">
-            <PrimaryButton
-              label="Test connection"
-              disabled={!ready || busy || !credentials[provider].trim()}
-              onPress={() => void test(provider)}
-            />
-            <PrimaryButton
-              label="Delete key"
-              variant="secondary"
-              disabled={!ready || busy}
-              onPress={() => {
-                if (!user) return;
-                const next = { ...credentials, [provider]: "" };
-                setCredentials(next);
-                setBusy(true);
-                void saveAiConfiguration(user.id, settings, next)
-                  .then(() => setMessage("Key deleted."))
-                  .catch(() => setMessage("Key deletion failed. Try again."))
-                  .finally(() => setBusy(false));
-              }}
-            />
-          </View>
-        </SectionCard>
-      ))}
-      <View className="flex-row items-center gap-4">
-        <ThemedSwitch
-          accessibilityLabel="Automatic provider fallback"
-          value={settings.fallbackEnabled}
-          onValueChange={(value) =>
-            setSettings((current) => ({ ...current, fallbackEnabled: value }))
-          }
-        />
-        <Text className="text-ink-900 dark:text-white">Automatic fallback</Text>
-      </View>
-      <PrimaryButton
-        label="Save settings"
-        disabled={!ready}
-        loading={busy}
-        onPress={() => void save()}
+      <SegmentedControl
+        label="Settings sections"
+        value={section}
+        onChange={setSection}
+        options={[
+          { value: "appearance", label: "Appearance" },
+          { value: "recognition", label: "Recognition" },
+          { value: "data", label: "Data & sync" },
+          { value: "advanced", label: "Advanced" },
+        ]}
       />
+      {section === "appearance" ? <AppearanceSettings /> : null}
+      {section === "data" ? (
+        <>
+          <StudySyncSettings />
+          <SectionCard className="gap-3">
+            <Text className="text-lg font-semibold text-foreground">
+              Your account
+            </Text>
+            <Text className="text-sm text-muted-foreground">
+              {user?.email ?? "Signed in"}
+            </Text>
+            <Text className="text-sm leading-6 text-muted-foreground">
+              Signing out keeps this device’s study library for your next
+              session.
+            </Text>
+            <SignOutButton />
+          </SectionCard>
+        </>
+      ) : null}
+      {section === "advanced" ? <LocalRecognitionLab /> : null}
+      {section === "recognition" ? (
+        <>
+          <View className="gap-2">
+            <Text className="text-xl font-semibold text-foreground">
+              Handwriting recognition
+            </Text>
+            <Text className="text-sm leading-6 text-muted-foreground">
+              Connect a provider to turn your handwriting into an editable
+              answer. Math entry and self-review work without keys.
+            </Text>
+          </View>
+          <SectionCard className="gap-3">
+            <Text className="text-base leading-6 text-ink-900 dark:text-white">
+              Enter your own API keys. Recognition sends your drawing and
+              credentials through Memoraid’s authenticated relay to the selected
+              provider. Keys are never saved on the server. OpenRouter uses free
+              models only; Gemini usage charges may apply.
+            </Text>
+            <Text className="text-sm text-ink-600 dark:text-ink-200">
+              {Platform.OS === "web"
+                ? "Keys stay in this tab’s session and clear when you sign out or close it."
+                : "Keys are kept in secure storage for this account on this device."}{" "}
+              Math entry and self-review work without keys.
+            </Text>
+          </SectionCard>
+          <View className="flex-row flex-wrap gap-4">
+            {(["gemini", "openrouter"] as const).map((provider) => (
+              <SectionCard
+                key={provider}
+                className="min-w-[280px] flex-1 gap-3"
+              >
+                <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+                  {provider === "gemini"
+                    ? "Gemini · primary"
+                    : "OpenRouter · free models only"}
+                </Text>
+                <TextInput
+                  accessibilityLabel={`${provider} API key`}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  value={credentials[provider]}
+                  onChangeText={(value) =>
+                    setCredentials((current) => ({
+                      ...current,
+                      [provider]: value,
+                    }))
+                  }
+                  placeholder="API key"
+                  placeholderTextColor={themeColors.mutedForeground}
+                  className="min-h-12 rounded-xl border border-border bg-input p-4 text-foreground"
+                />
+                <FormField
+                  label="Model ID"
+                  value={
+                    provider === "gemini"
+                      ? settings.geminiModel
+                      : settings.openrouterModel
+                  }
+                  onChangeText={(value) =>
+                    setSettings((current) => ({
+                      ...current,
+                      [provider === "gemini"
+                        ? "geminiModel"
+                        : "openrouterModel"]: value.trim(),
+                    }))
+                  }
+                />
+                {provider === "openrouter" ? (
+                  <Text className="text-sm text-ink-600 dark:text-ink-200">
+                    Use openrouter/free to select a free model automatically, or
+                    an image-capable model ending in :free. Free models have
+                    usage limits; paid models are blocked.
+                  </Text>
+                ) : null}
+                <View className="flex-row flex-wrap gap-2">
+                  <PrimaryButton
+                    label="Test connection"
+                    disabled={!ready || busy || !credentials[provider].trim()}
+                    onPress={() => void test(provider)}
+                  />
+                  <PrimaryButton
+                    label="Delete key"
+                    variant="secondary"
+                    disabled={!ready || busy}
+                    onPress={() => {
+                      if (!user) return;
+                      const next = { ...credentials, [provider]: "" };
+                      setCredentials(next);
+                      setBusy(true);
+                      void saveAiConfiguration(user.id, settings, next)
+                        .then(() => setMessage("Key deleted."))
+                        .catch(() =>
+                          setMessage("Key deletion failed. Try again."),
+                        )
+                        .finally(() => setBusy(false));
+                    }}
+                  />
+                </View>
+              </SectionCard>
+            ))}
+          </View>
+          <View className="flex-row items-center gap-4">
+            <ThemedSwitch
+              accessibilityLabel="Automatic provider fallback"
+              value={settings.fallbackEnabled}
+              onValueChange={(value) =>
+                setSettings((current) => ({
+                  ...current,
+                  fallbackEnabled: value,
+                }))
+              }
+            />
+            <Text className="text-ink-900 dark:text-white">
+              Automatic fallback
+            </Text>
+          </View>
+          <PrimaryButton
+            label="Save settings"
+            disabled={!ready}
+            loading={busy}
+            onPress={() => void save()}
+          />
+        </>
+      ) : null}
       {message ? (
         <Text
           accessibilityRole="alert"

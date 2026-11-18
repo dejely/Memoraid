@@ -29,7 +29,7 @@ export function AppearanceSettings() {
       <View
         accessibilityRole="radiogroup"
         accessibilityLabel="Color theme"
-        className="gap-3"
+        className="flex-row flex-wrap gap-3"
       >
         {THEME_OPTIONS.map((option) => {
           const selected = theme.palette === option.id;
@@ -45,7 +45,7 @@ export function AppearanceSettings() {
                   ? theme.colors.primary
                   : theme.colors.border,
               }}
-              className="gap-3 rounded-2xl border-2 bg-card p-4"
+              className="min-w-[240px] flex-1 gap-3 rounded-xl border-2 bg-card p-4"
             >
               <View className="flex-row justify-between gap-2">
                 <Text className="text-base font-semibold text-foreground">
@@ -83,6 +83,24 @@ export function AppearanceSettings() {
                       >
                         {mode === "light" ? "Light" : "Dark"}
                       </Text>
+                      <View
+                        style={{
+                          height: 8,
+                          width: "80%",
+                          backgroundColor: colors.muted,
+                          borderRadius: 3,
+                        }}
+                      />
+                      <View
+                        style={{
+                          height: 22,
+                          width: "100%",
+                          backgroundColor: colors.card,
+                          borderRadius: 4,
+                          borderWidth: 1,
+                          borderColor: colors.border,
+                        }}
+                      />
                       <View className="flex-row gap-2">
                         {[colors.primary, colors.secondary, colors.accent].map(
                           (color, i) => (

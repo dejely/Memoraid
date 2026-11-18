@@ -27,6 +27,7 @@ export function FormField({
         {label}
       </Text>
       <TextInput
+        accessibilityLabel={label}
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
@@ -34,7 +35,7 @@ export function FormField({
         multiline={multiline}
         textAlignVertical={multiline ? "top" : "center"}
         className={cn(
-          "rounded-2xl border border-ink-200 bg-white px-4 py-3 text-base text-ink-900 dark:border-ink-600 dark:bg-ink-800 dark:text-white",
+          "min-h-12 rounded-xl border border-border bg-input px-4 py-3 text-base text-foreground",
           multiline && "min-h-28",
         )}
       />
