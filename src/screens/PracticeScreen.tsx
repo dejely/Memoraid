@@ -1,6 +1,8 @@
+import { SegmentedControl } from "../components/SegmentedControl";
+import { EmptyState } from "../components/EmptyState";
 import { studyStore } from "../db/local/store";
 import { useEffect, useRef, useState } from "react";
-import { Text, View } from "react-native";
+import { Text, View, useWindowDimensions } from "react-native";
 import { useQuery } from "@tanstack/react-query";
 import { AppScreen } from "../components/AppScreen";
 import { ScreenHeader } from "../components/ScreenHeader";
@@ -32,6 +34,7 @@ import {
 } from "../features/practice/repository";
 import type { Ink } from "../features/practice/ink";
 export default function PracticeScreen() {
+  const { width } = useWindowDimensions();
   const decks = useDecks(),
     attempts = useQuery({
       queryKey: ["practice", "attempts"],
@@ -148,21 +151,19 @@ export default function PracticeScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        title="Practice"
-        subtitle="Write, confirm, then check your answer. Drafts and strokes save on this device."
+        eyebrow="Learn by doing"
+        title="Your thinking space"
+        subtitle="Write it out, check your answer, and keep what you learn. Drafts save on this device."
       />
-      <View className="flex-row gap-2">
-        <PrimaryButton
-          label="Practice"
-          variant={tab === "practice" ? "primary" : "secondary"}
-          onPress={() => setTab("practice")}
-        />
-        <PrimaryButton
-          label="Mistake notebook"
-          variant={tab === "notebook" ? "primary" : "secondary"}
-          onPress={() => setTab("notebook")}
-        />
-      </View>
+      <SegmentedControl
+        label="Practice mode"
+        value={tab}
+        onChange={(value) => setTab(value as "practice" | "notebook")}
+        options={[
+          { value: "practice", label: "Practice" },
+          { value: "notebook", label: "Mistake notebook" },
+        ]}
+      />
       {tab === "notebook" ? (
         <>
           <Text className="text-ink-700 dark:text-ink-100">
@@ -179,150 +180,187 @@ export default function PracticeScreen() {
               />
             ))}
           {!attempts.data?.some((a) => !a.isCorrect) ? (
-            <Text className="text-ink-700 dark:text-ink-100">
-              No mistakes saved yet.
-            </Text>
+            <EmptyState
+              title="A clean page"
+              message="Answers that need more practice will appear here, ready for your corrections."
+            />
           ) : null}
         </>
       ) : (
-        <>
-          <SectionCard className="gap-3">
-            <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-              Core statistics
-            </Text>
-            <View className="flex-row flex-wrap gap-2">
-              {concepts.map((c) => (
-                <PrimaryButton
-                  key={c}
-                  label={c.replaceAll("_", " ")}
-                  variant={concept === c ? "primary" : "secondary"}
-                  onPress={() => setConcept(c)}
-                />
-              ))}
-            </View>
-            <PrimaryButton
-              label="New statistics problem"
-              disabled={!ready || busy}
-              onPress={() => generated()}
-            />
-            <PrimaryButton
-              label="Practice a weak concept"
-              variant="secondary"
-              disabled={!ready || busy}
-              onPress={() => {
-                const c = weakConcept(
-                  (attempts.data ?? []).map((a) => ({
-                    concept: a.problem.concept,
-                    isCorrect: a.isCorrect,
-                    createdAt: a.createdAt,
-                  })),
-                );
-                setConcept(c);
-                generated(c);
-              }}
-            />
-          </SectionCard>
-          <SectionCard className="gap-3">
-            <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-              Your written cards · due first
-            </Text>
-            {decks.data?.map((d) => (
-              <PrimaryButton
-                key={d.id}
-                label={`${d.title} · ${d.dueCount} due`}
-                variant="secondary"
-                disabled={!ready || busy}
-                onPress={() => void fromDeck(d.id)}
-              />
-            ))}
-            {!decks.data?.length ? (
-              <Text className="text-ink-700 dark:text-ink-100">
-                Create or import a study set to practice its written cards.
-              </Text>
-            ) : null}
-          </SectionCard>
-          {draft ? (
-            <SectionCard className="gap-4">
-              <Text className="text-sm text-ink-600 dark:text-ink-200">
-                {draft.problem.concept.replaceAll("_", " ")} ·{" "}
-                {draft.problem.mode === "numeric"
-                  ? "Tolerance ±0.001"
-                  : "Confirm your answer before grading"}
-              </Text>
-              <MathContent>{draft.problem.prompt}</MathContent>
-              <AnswerInput
-                key={draft.id}
-                value={draft.answer}
-                locked={result}
-                initialInk={draft.ink}
-                onChangeText={(answer) => {
-                  if (current.current) change({ ...current.current, answer });
-                }}
-                onInkChange={(ink) => {
-                  if (current.current) change({ ...current.current, ink });
-                }}
-                onConfirmed={(originalRecognition, confirmedRecognition) => {
-                  if (current.current)
-                    change({
-                      ...current.current,
-                      originalRecognition,
-                      confirmedRecognition,
-                    });
-                }}
-              />
-              {!result && !needsReview ? (
-                <PrimaryButton
-                  label="Check answer"
-                  disabled={busy || !draft.answer.trim()}
-                  onPress={() => {
-                    const correct = gradeMath(
-                      draft.answer,
-                      draft.problem.expected,
-                      draft.problem.mode,
-                      draft.problem.tolerance,
-                    );
-                    if (correct === null) {
-                      setNeedsReview(true);
-                      setFeedback(
-                        "Compare your confirmed answer, then rate it yourself.",
-                      );
-                    } else void complete(correct, "automatic");
+        <View
+          style={{
+            flexDirection:
+              width >= 1200
+                ? "row-reverse"
+                : draft
+                  ? "column"
+                  : "column-reverse",
+            gap: 24,
+            alignItems: "stretch",
+          }}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            {draft ? (
+              <SectionCard className="gap-4">
+                <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground">
+                  02 / Work it out
+                </Text>
+                <Text className="text-sm text-ink-600 dark:text-ink-200">
+                  {draft.problem.concept.replaceAll("_", " ")} ·{" "}
+                  {draft.problem.mode === "numeric"
+                    ? "Tolerance ±0.001"
+                    : "Confirm your answer before grading"}
+                </Text>
+                <MathContent>{draft.problem.prompt}</MathContent>
+                <AnswerInput
+                  key={draft.id}
+                  value={draft.answer}
+                  locked={result}
+                  initialInk={draft.ink}
+                  onChangeText={(answer) => {
+                    if (current.current) change({ ...current.current, answer });
+                  }}
+                  onInkChange={(ink) => {
+                    if (current.current) change({ ...current.current, ink });
+                  }}
+                  onConfirmed={(originalRecognition, confirmedRecognition) => {
+                    if (current.current)
+                      change({
+                        ...current.current,
+                        originalRecognition,
+                        confirmedRecognition,
+                      });
                   }}
                 />
-              ) : null}
-              {needsReview || result ? (
-                <>
-                  <Text className="text-sm text-ink-700 dark:text-ink-100">
-                    Expected answer
-                  </Text>
-                  <MathContent>{draft.problem.expected}</MathContent>
-                  <MathContent>{draft.problem.explanation}</MathContent>
-                </>
-              ) : null}
-              {needsReview ? (
-                <View className="flex-row gap-2">
+                {!result && !needsReview ? (
                   <PrimaryButton
-                    label="I was correct"
-                    disabled={busy}
-                    onPress={() => void complete(true, "self_review")}
+                    label="Check answer"
+                    disabled={busy || !draft.answer.trim()}
+                    onPress={() => {
+                      const correct = gradeMath(
+                        draft.answer,
+                        draft.problem.expected,
+                        draft.problem.mode,
+                        draft.problem.tolerance,
+                      );
+                      if (correct === null) {
+                        setNeedsReview(true);
+                        setFeedback(
+                          "Compare your confirmed answer, then rate it yourself.",
+                        );
+                      } else void complete(correct, "automatic");
+                    }}
                   />
+                ) : null}
+                {needsReview || result ? (
+                  <>
+                    <Text className="text-sm text-ink-700 dark:text-ink-100">
+                      Expected answer
+                    </Text>
+                    <MathContent>{draft.problem.expected}</MathContent>
+                    <MathContent>{draft.problem.explanation}</MathContent>
+                  </>
+                ) : null}
+                {needsReview ? (
+                  <View className="flex-row gap-2">
+                    <PrimaryButton
+                      label="I was correct"
+                      disabled={busy}
+                      onPress={() => void complete(true, "self_review")}
+                    />
+                    <PrimaryButton
+                      label="I need practice"
+                      variant="secondary"
+                      disabled={busy}
+                      onPress={() => void complete(false, "self_review")}
+                    />
+                  </View>
+                ) : null}
+                {result ? (
                   <PrimaryButton
-                    label="I need practice"
-                    variant="secondary"
-                    disabled={busy}
-                    onPress={() => void complete(false, "self_review")}
+                    label="Practice again"
+                    onPress={() => start(newPracticeDraft(draft.problem))}
                   />
-                </View>
-              ) : null}
-              {result ? (
+                ) : null}
+              </SectionCard>
+            ) : (
+              <SectionCard className="min-h-64 items-center justify-center gap-4 py-12">
+                <Text className="text-2xl font-semibold tracking-tight text-foreground">
+                  Space to work things out.
+                </Text>
+                <Text className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
+                  Choose a statistics topic or a set from your library. Type,
+                  use the math keyboard, or write with a stylus.
+                </Text>
                 <PrimaryButton
-                  label="Practice again"
-                  onPress={() => start(newPracticeDraft(draft.problem))}
+                  label="Start a problem"
+                  disabled={!ready || busy}
+                  onPress={() => generated()}
                 />
+              </SectionCard>
+            )}
+          </View>
+          <View style={{ width: width >= 1200 ? 300 : undefined, gap: 20 }}>
+            <SectionCard className="gap-3">
+              <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground">
+                01 / Choose a topic
+              </Text>
+              <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+                Core statistics
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {concepts.map((c) => (
+                  <PrimaryButton
+                    key={c}
+                    label={c.replaceAll("_", " ")}
+                    variant={concept === c ? "primary" : "secondary"}
+                    onPress={() => setConcept(c)}
+                  />
+                ))}
+              </View>
+              <PrimaryButton
+                label="New statistics problem"
+                disabled={!ready || busy}
+                onPress={() => generated()}
+              />
+              <PrimaryButton
+                label="Practice a weak concept"
+                variant="secondary"
+                disabled={!ready || busy}
+                onPress={() => {
+                  const c = weakConcept(
+                    (attempts.data ?? []).map((a) => ({
+                      concept: a.problem.concept,
+                      isCorrect: a.isCorrect,
+                      createdAt: a.createdAt,
+                    })),
+                  );
+                  setConcept(c);
+                  generated(c);
+                }}
+              />
+            </SectionCard>
+            <SectionCard className="gap-3">
+              <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+                Practice from your library
+              </Text>
+              {decks.data?.map((d) => (
+                <PrimaryButton
+                  key={d.id}
+                  label={`${d.title} · ${d.dueCount} due`}
+                  variant="secondary"
+                  disabled={!ready || busy}
+                  onPress={() => void fromDeck(d.id)}
+                />
+              ))}
+              {!decks.data?.length ? (
+                <Text className="text-ink-700 dark:text-ink-100">
+                  Create or import a study set to practice its written cards.
+                </Text>
               ) : null}
             </SectionCard>
-          ) : null}
-        </>
+          </View>
+        </View>
       )}
       {feedback ? (
         <Text

@@ -9,7 +9,10 @@ import { FormField } from "../components/FormField";
 import { PrimaryButton } from "../components/PrimaryButton";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
-import { useCreateImportedDeckMutation, useImportPreviewMutation } from "../features/import/hooks";
+import {
+  useCreateImportedDeckMutation,
+  useImportPreviewMutation,
+} from "../features/import/hooks";
 import { readPickedTextFile } from "../services/import/file-reader";
 import { splitTags } from "../utils/text";
 
@@ -47,13 +50,21 @@ export default function ImportScreen() {
         setTitle(stripExtension(asset.name));
       }
     } catch (error) {
-      Alert.alert("Import failed", error instanceof Error ? error.message : "The selected file could not be read.");
+      Alert.alert(
+        "Import failed",
+        error instanceof Error
+          ? error.message
+          : "The selected file could not be read.",
+      );
     }
   }
 
   async function handlePreview(): Promise<void> {
     if (!rawText.trim()) {
-      Alert.alert("Add notes first", "Paste notes or pick a text file before generating a preview.");
+      Alert.alert(
+        "Add notes first",
+        "Paste notes or pick a text file before generating a preview.",
+      );
       return;
     }
 
@@ -68,7 +79,10 @@ export default function ImportScreen() {
 
   async function handleCreateSet(): Promise<void> {
     if (!previewMutation.data || previewMutation.data.cards.length === 0) {
-      Alert.alert("No cards to save", "Generate a preview with at least one parsed flashcard first.");
+      Alert.alert(
+        "No cards to save",
+        "Generate a preview with at least one parsed flashcard first.",
+      );
       return;
     }
 
@@ -86,41 +100,76 @@ export default function ImportScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow="Modular import"
+        eyebrow="From notes to knowledge"
         title="Import notes"
-        subtitle="Use a local parser now, and keep the AI path behind a backend interface for a later build."
+        subtitle="Bring your notes. Leave with a set you can study."
       />
 
       <SectionCard className="gap-4">
         <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
-          Supported line formats include `term: definition`, `term - definition`, `term::definition`, or tab-separated notes. Add `Example: ...` on the next line to attach an example to the previous card.
+          Use term: definition, term - definition, term::definition, or
+          tab-separated notes. Add Example: on the next line to include an
+          example.
         </Text>
-        <PrimaryButton label="Pick a text file" variant="secondary" onPress={handlePickDocument} />
+        <PrimaryButton
+          label="Pick a text file"
+          variant="secondary"
+          onPress={handlePickDocument}
+        />
       </SectionCard>
 
-      <FormField label="Set title" value={title} onChangeText={setTitle} placeholder="Organic chemistry review" />
-      <FormField label="Description" value={description} onChangeText={setDescription} placeholder="Short context for this import" multiline />
-      <FormField label="Tags" value={tagsValue} onChangeText={setTagsValue} placeholder="exam prep, semester 2, notes" />
-      <FormField
-        label="Paste notes"
-        value={rawText}
-        onChangeText={setRawText}
-        placeholder={"osmosis: movement of water across a membrane\nExample: Water moves toward higher solute concentration"}
-        multiline
-      />
+      <SectionCard className="gap-5">
+        <Text className="text-lg font-semibold text-foreground">
+          Build your set
+        </Text>
+        <FormField
+          label="Set title"
+          value={title}
+          onChangeText={setTitle}
+          placeholder="Organic chemistry review"
+        />
+        <FormField
+          label="Description"
+          value={description}
+          onChangeText={setDescription}
+          placeholder="Short context for this import"
+          multiline
+        />
+        <FormField
+          label="Tags"
+          value={tagsValue}
+          onChangeText={setTagsValue}
+          placeholder="exam prep, semester 2, notes"
+        />
+        <FormField
+          label="Paste notes"
+          value={rawText}
+          onChangeText={setRawText}
+          placeholder={
+            "osmosis: movement of water across a membrane\nExample: Water moves toward higher solute concentration"
+          }
+          multiline
+        />
 
-      <PrimaryButton
-        label="Preview cards"
-        loading={previewMutation.isPending}
-        onPress={() => void handlePreview().catch(() => {})}
-      />
+        <PrimaryButton
+          label="Preview cards"
+          loading={previewMutation.isPending}
+          onPress={() => void handlePreview().catch(() => {})}
+        />
+      </SectionCard>
 
       {previewMutation.data ? (
         <View className="gap-3">
           <SectionCard className="gap-3">
-            <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">{previewMutation.data.sourceLabel}</Text>
-            <Text className="text-2xl font-semibold text-ink-900 dark:text-white">{previewMutation.data.cards.length} cards ready</Text>
-            <Text className="text-sm text-ink-600 dark:text-ink-200">Warnings: {previewMutation.data.warnings.length}</Text>
+            <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">
+              {previewMutation.data.sourceLabel}
+            </Text>
+            <Text className="text-2xl font-semibold text-ink-900 dark:text-white">
+              {previewMutation.data.cards.length} cards ready
+            </Text>
+            <Text className="text-sm text-ink-600 dark:text-ink-200">
+              Warnings: {previewMutation.data.warnings.length}
+            </Text>
             <PrimaryButton
               label="Create imported set"
               loading={createImportedDeckMutation.isPending}
@@ -130,9 +179,14 @@ export default function ImportScreen() {
 
           {previewMutation.data.warnings.length > 0 ? (
             <SectionCard className="gap-2">
-              <Text className="text-lg font-semibold text-ink-900 dark:text-white">Parser warnings</Text>
+              <Text className="text-lg font-semibold text-ink-900 dark:text-white">
+                Parser warnings
+              </Text>
               {previewMutation.data.warnings.slice(0, 6).map((warning) => (
-                <Text key={warning} className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+                <Text
+                  key={warning}
+                  className="text-sm leading-6 text-ink-600 dark:text-ink-200"
+                >
                   {warning}
                 </Text>
               ))}
@@ -141,15 +195,28 @@ export default function ImportScreen() {
 
           {previewMutation.data.cards.map((card, index) => (
             <SectionCard key={`${card.term}-${index}`} className="gap-3">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">Card {index + 1}</Text>
-              <Text className="text-xl font-semibold text-ink-900 dark:text-white">{card.term}</Text>
-              <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{card.definition}</Text>
-              {card.example ? <Text className="text-sm leading-6 text-ink-500 dark:text-ink-300">Example: {card.example}</Text> : null}
+              <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">
+                Card {index + 1}
+              </Text>
+              <Text className="text-xl font-semibold text-ink-900 dark:text-white">
+                {card.term}
+              </Text>
+              <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
+                {card.definition}
+              </Text>
+              {card.example ? (
+                <Text className="text-sm leading-6 text-ink-500 dark:text-ink-300">
+                  Example: {card.example}
+                </Text>
+              ) : null}
             </SectionCard>
           ))}
         </View>
       ) : (
-        <EmptyState title="No preview yet" message="Import a file or paste raw notes, then generate a preview before saving the set." />
+        <EmptyState
+          title="No preview yet"
+          message="Import a file or paste raw notes, then generate a preview before saving the set."
+        />
       )}
     </AppScreen>
   );

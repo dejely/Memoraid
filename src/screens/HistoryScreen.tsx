@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { getAttemptQuestions } from "../db/repositories/test-repository";
 import { MathContent } from "../components/math/MathContent";
 import { PrimaryButton } from "../components/PrimaryButton";
-import { Platform, Text, View } from "react-native";
+import { Text, View } from "react-native";
 
 import { AppScreen } from "../components/AppScreen";
 import { DataErrorState } from "../components/DataErrorState";
@@ -47,15 +47,9 @@ export default function HistoryScreen() {
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow={
-          Platform.OS === "web" ? "Saved to your account" : "Saved locally"
-        }
+        eyebrow="Your learning journey"
         title="History"
-        subtitle={
-          Platform.OS === "web"
-            ? "Study sessions and test attempts are saved privately to your account across browsers."
-            : "Study sessions and test attempts are persisted on-device so you can track your practice over time."
-        }
+        subtitle="Every session is a step forward. Revisit your results and see what needs another look."
       />
 
       <View className="gap-3">
