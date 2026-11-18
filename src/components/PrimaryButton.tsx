@@ -31,11 +31,14 @@ export function PrimaryButton({
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled: isDisabled, busy: loading }}
       disabled={isDisabled}
       onPress={onPress}
-      style={{ opacity: isDisabled ? 0.55 : 1 }}
+      style={({ pressed }) => ({
+        opacity: isDisabled ? 0.55 : pressed ? 0.75 : 1,
+      })}
       className={cn(
-        "min-h-12 flex-row items-center justify-center gap-2 rounded-2xl px-4",
+        "min-h-12 flex-row items-center justify-center gap-2 rounded-xl px-4",
         variant === "primary" && "bg-primary",
         variant === "secondary" && "border border-border bg-secondary",
         variant === "ghost" && "bg-transparent",

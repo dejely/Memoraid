@@ -11,10 +11,7 @@ export function SectionCard({
   return (
     <View
       {...props}
-      className={cn(
-        "rounded-[28px] border border-border bg-card p-4 shadow-soft",
-        className,
-      )}
+      className={cn("rounded-2xl border border-border bg-card p-5", className)}
     >
       {children}
     </View>

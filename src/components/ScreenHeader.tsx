@@ -13,11 +13,21 @@ export function ScreenHeader({
   trailing?: ReactNode;
 }) {
   return (
-    <View className="flex-row items-start justify-between gap-4">
-      <View className="flex-1 gap-2">
-        {eyebrow ? <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">{eyebrow}</Text> : null}
-        <Text className="text-3xl font-bold tracking-tight text-ink-900 dark:text-white">{title}</Text>
-        {subtitle ? <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{subtitle}</Text> : null}
+    <View className="flex-row flex-wrap items-center justify-between gap-4">
+      <View className="min-w-[200px] flex-1 gap-2">
+        {eyebrow ? (
+          <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground">
+            {eyebrow}
+          </Text>
+        ) : null}
+        <Text className="text-3xl font-bold tracking-tight text-foreground">
+          {title}
+        </Text>
+        {subtitle ? (
+          <Text className="max-w-2xl text-sm leading-6 text-muted-foreground">
+            {subtitle}
+          </Text>
+        ) : null}
       </View>
       {trailing ? <View>{trailing}</View> : null}
     </View>
