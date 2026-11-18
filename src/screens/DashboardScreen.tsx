@@ -1,8 +1,13 @@
-import { MathContent } from "../components/math/MathContent";
-import { StudyRewards } from "../components/StudyRewards";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { Platform, Text, View } from "react-native";
-
+import { useState } from "react";
+import {
+  Pressable,
+  Text,
+  TextInput,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { AppScreen } from "../components/AppScreen";
 import { CloudMigrationCard } from "../components/CloudMigrationCard";
 import { DataErrorState } from "../components/DataErrorState";
@@ -13,153 +18,319 @@ import { PrimaryButton } from "../components/PrimaryButton";
 import { ScreenHeader } from "../components/ScreenHeader";
 import { SectionCard } from "../components/SectionCard";
 import { StatTile } from "../components/StatTile";
-import { ThemeToggleButton } from "../components/ThemeToggleButton";
-import { SignOutButton } from "../components/auth/SignOutButton";
-import { APP_NAME } from "../constants/app";
+import { StudyRewards } from "../components/StudyRewards";
+import { useThemeColors } from "../components/ThemeProvider";
 import { useDashboardData } from "../features/dashboard/hooks";
-import { useAuth } from "../services/auth/AuthProvider";
-import { formatDateTime, getRelativeTime } from "../utils/date";
+import { getRelativeTime } from "../utils/date";
 
 export default function DashboardScreen() {
   const dashboardQuery = useDashboardData();
-  const { user } = useAuth();
-
-  if (dashboardQuery.isLoading) {
-    return <LoadingState message="Loading decks, activity, and review data..." />;
-  }
-
-  if (dashboardQuery.isError) {
+  const colors = useThemeColors();
+  const { width } = useWindowDimensions();
+  const [search, setSearch] = useState("");
+  const [dueOnly, setDueOnly] = useState(false);
+  const wide = width >= 1200;
+  if (dashboardQuery.isLoading)
+    return <LoadingState message="Getting your study space ready…" />;
+  if (dashboardQuery.isError)
     return <DataErrorState onRetry={() => void dashboardQuery.refetch()} />;
-  }
-
   const dashboard = dashboardQuery.data;
-
-  if (!dashboard) {
+  if (!dashboard)
     return (
       <AppScreen>
-        <ScreenHeader title="Dashboard" subtitle="Your study dashboard could not be loaded." />
-        <EmptyState title="No data yet" message="Open the app again to initialize the local database." />
+        <EmptyState
+          title="Your library is not ready"
+          message="Reopen the app to load your study sets."
+        />
       </AppScreen>
     );
-  }
-
-  const averageScore =
-    dashboard.testHistory.length === 0
-      ? 0
-      : Math.round(
-          dashboard.testHistory.reduce((sum, attempt) => sum + attempt.scorePercent, 0) / dashboard.testHistory.length,
-        );
+  const averageScore = dashboard.testHistory.length
+    ? `${Math.round(dashboard.testHistory.reduce((sum, item) => sum + item.scorePercent, 0) / dashboard.testHistory.length)}%`
+    : "—";
+  const dueCount = dashboard.decks.reduce(
+    (sum, deck) => sum + deck.dueCount,
+    0,
+  );
+  const reviewSet =
+    dashboard.decks.find((deck) => deck.dueCount > 0) ??
+    dashboard.decks.find((deck) => deck.cardCount > 0);
+  const query = search.trim().toLowerCase();
+  const filtered = dashboard.decks.filter(
+    (deck) =>
+      (!dueOnly || deck.dueCount > 0) &&
+      [deck.title, deck.description, ...deck.tags].some((text) =>
+        text.toLowerCase().includes(query),
+      ),
+  );
 
   return (
     <AppScreen>
       <ScreenHeader
-        eyebrow={Platform.OS === "web" ? "Cloud study library" : "Local-first library"}
-        title={APP_NAME}
-        subtitle={
-          Platform.OS === "web"
-            ? "Your private study sets, review progress, and test history follow your account across browsers."
-            : "Your SQLite library stays on-device, with an optional one-time upload to your private web account."
+        eyebrow="Your workspace"
+        title="A little progress, every day."
+        subtitle="Pick up where you left off, or learn something new."
+        trailing={
+          <PrimaryButton
+            label="New set"
+            onPress={() => router.push("/sets/new")}
+            icon={
+              <Ionicons name="add" size={18} color={colors.primaryForeground} />
+            }
+          />
         }
-        trailing={<ThemeToggleButton />}
       />
-
-      <CloudMigrationCard />
-      <StudyRewards />
-
-      <SectionCard className="gap-5 bg-ink-900">
-        <View className="gap-2">
-          <Text className="text-xs font-medium uppercase tracking-[2px] text-white/60">Today’s study pulse</Text>
-          <Text className="text-3xl font-bold tracking-tight text-white">Keep your decks tight, current, and reviewable.</Text>
-          <Text className="text-sm leading-6 text-white/75">
-            Create sets manually, import note files, resume flashcards, and run mixed test sessions from the same study library.
-          </Text>
+      <SectionCard className="gap-5 bg-muted p-6 md:p-8">
+        <View className="flex-row items-start justify-between gap-4">
+          <View className="flex-1 gap-3">
+            <Text className="text-[10px] font-semibold uppercase tracking-[2px] text-muted-foreground">
+              Ready when you are
+            </Text>
+            <Text className="text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
+              {dueCount
+                ? `${dueCount} cards. One step forward.`
+                : reviewSet
+                  ? "Make a little room for learning."
+                  : "Big ideas start with a small set."}
+            </Text>
+            <Text className="max-w-xl text-sm leading-6 text-muted-foreground">
+              {reviewSet
+                ? `Start with ${reviewSet.title}. A short review now helps it stay with you.`
+                : "Turn your notes into flashcards, then build a study routine at your own pace."}
+            </Text>
+          </View>
+          {width >= 768 ? (
+            <View className="h-14 w-14 items-center justify-center rounded-2xl border border-border bg-card">
+              <Ionicons
+                name="sparkles-outline"
+                size={26}
+                color={colors.foreground}
+              />
+            </View>
+          ) : null}
         </View>
-
-        <View className="flex-row gap-3">
-          <PrimaryButton className="flex-1 bg-white" textClassName="text-ink-900" label="New set" onPress={() => router.push("/sets/new")} />
-          <PrimaryButton className="flex-1 border border-white/20 bg-white/10" textClassName="text-white" label="Import notes" onPress={() => router.push("/import")} />
+        <View className="flex-row flex-wrap gap-3">
+          <PrimaryButton
+            label={reviewSet ? "Start reviewing" : "Create your first set"}
+            onPress={() =>
+              router.push(
+                reviewSet ? `/sets/${reviewSet.id}/study` : "/sets/new",
+              )
+            }
+            icon={
+              <Ionicons
+                name="arrow-forward"
+                size={17}
+                color={colors.primaryForeground}
+              />
+            }
+          />
+          <PrimaryButton
+            label="Import notes"
+            variant="secondary"
+            onPress={() => router.push("/import")}
+          />
         </View>
       </SectionCard>
-
-      <View className="flex-row gap-3">
-        <StatTile label="Sets" value={`${dashboard.decks.length}`} />
-        <StatTile label="Due cards" value={`${dashboard.dueCards.length}`} tone="amber" />
-        <StatTile label="Avg score" value={`${averageScore}%`} tone="sea" />
+      <View className="flex-row gap-2 md:gap-4">
+        <StatTile label="Study sets" value={`${dashboard.decks.length}`} />
+        <StatTile label="Due cards" value={`${dueCount}`} tone="amber" />
+        <StatTile label="Recent avg" value={averageScore} tone="sea" />
       </View>
-
-      <View className="gap-3">
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">Study sets</Text>
-        {dashboard.decks.length === 0 ? (
-          <EmptyState title="No study sets yet" message="Create a set manually or import notes from a text file to get started." />
-        ) : (
-          dashboard.decks.map((deck) => (
-            <DeckCard key={deck.id} deck={deck} onPress={() => router.push(`/sets/${deck.id}`)} />
-          ))
-        )}
-      </View>
-
-      <View className="gap-3">
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">Recent activity</Text>
-        {dashboard.recentActivity.length === 0 ? (
-          <EmptyState title="No activity yet" message="Run a flashcard session or take a test to populate your study timeline." />
-        ) : (
-          dashboard.recentActivity.map((item) => (
-            <SectionCard key={item.id} className="gap-2">
-              <Text className="text-xs font-medium uppercase tracking-[2px] text-sea-700 dark:text-sea-300">{item.type}</Text>
-              <Text className="text-lg font-semibold text-ink-900 dark:text-white">{item.title}</Text>
-              <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">{item.subtitle}</Text>
-              <Text className="text-xs font-medium text-ink-500 dark:text-ink-300">{getRelativeTime(item.happenedAt)}</Text>
-            </SectionCard>
-          ))
-        )}
-      </View>
-
-      <View className="gap-3">
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">Due for review</Text>
-        {dashboard.dueCards.length === 0 ? (
-          <EmptyState title="Nothing due right now" message="Mark cards easy or hard in flashcard mode to build a review queue." />
-        ) : (
-          dashboard.dueCards.map((card) => (
-            <SectionCard key={card.cardId} className="gap-2">
-              <Text className="text-sm font-semibold uppercase tracking-[1.5px] text-amber-700 dark:text-amber-200">{card.deckTitle}</Text>
-              <MathContent className="text-xl font-semibold text-ink-900 dark:text-white">{card.term}</MathContent>
-              <Text className="text-sm text-ink-600 dark:text-ink-200">Due {formatDateTime(card.dueAt)}</Text>
-            </SectionCard>
-          ))
-        )}
-      </View>
-
-      <View className="gap-3">
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">Past test scores</Text>
-        {dashboard.testHistory.length === 0 ? (
-          <EmptyState title="No test attempts yet" message="Test mode will save scores, question breakdowns, and weak cards here." />
-        ) : (
-          dashboard.testHistory.map((attempt) => (
-            <SectionCard key={attempt.id} className="flex-row items-center justify-between gap-4">
-              <View className="flex-1 gap-1">
-                <Text className="text-lg font-semibold text-ink-900 dark:text-white">{attempt.deckTitle}</Text>
-                <Text className="text-sm text-ink-600 dark:text-ink-200">
-                  {attempt.correctAnswers}/{attempt.totalQuestions} correct · {attempt.weakCardCount} weak cards
+      <View
+        style={{
+          flexDirection: wide ? "row" : "column",
+          alignItems: "stretch",
+          gap: 24,
+        }}
+      >
+        <View style={{ flex: 1, minWidth: 0, gap: 20 }}>
+          <View className="flex-row items-center justify-between gap-3">
+            <View className="gap-1">
+              <Text className="text-xl font-semibold tracking-tight text-foreground">
+                Your library
+              </Text>
+              <Text className="text-xs text-muted-foreground">
+                Small sets. Lasting knowledge.
+              </Text>
+            </View>
+            <Text className="text-xs text-muted-foreground">
+              {dashboard.decks.length} sets
+            </Text>
+          </View>
+          <View className="min-h-12 flex-row items-center gap-3 rounded-xl border border-border bg-card px-4">
+            <Ionicons
+              name="search-outline"
+              size={18}
+              color={colors.mutedForeground}
+            />
+            <TextInput
+              accessibilityLabel="Search study sets"
+              placeholder="Search sets or tags…"
+              placeholderTextColor={colors.mutedForeground}
+              value={search}
+              onChangeText={setSearch}
+              className="min-h-12 flex-1 text-sm text-foreground"
+            />
+            {search ? (
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Clear search"
+                onPress={() => setSearch("")}
+                className="min-h-11 min-w-11 items-center justify-center"
+              >
+                <Ionicons name="close" size={18} color={colors.foreground} />
+              </Pressable>
+            ) : null}
+          </View>
+          <View
+            accessibilityRole="tablist"
+            accessibilityLabel="Library filter"
+            className="flex-row gap-2"
+          >
+            {[false, true].map((due) => (
+              <Pressable
+                key={String(due)}
+                accessibilityRole="tab"
+                accessibilityState={{ selected: dueOnly === due }}
+                onPress={() => setDueOnly(due)}
+                className={`min-h-11 justify-center rounded-xl border px-4 ${dueOnly === due ? "border-border bg-muted" : "border-transparent"}`}
+              >
+                <Text
+                  className={`text-xs ${dueOnly === due ? "font-semibold text-foreground" : "text-muted-foreground"}`}
+                >
+                  {due ? "Due for review" : "All sets"}
                 </Text>
-              </View>
-              <View className="rounded-3xl bg-sea-50 px-4 py-3 dark:bg-sea-800/50">
-                <Text className="text-lg font-bold text-sea-800 dark:text-sea-100">{attempt.scorePercent}%</Text>
-              </View>
+              </Pressable>
+            ))}
+          </View>
+          {!filtered.length ? (
+            <SectionCard className="items-center gap-3 py-10">
+              <Ionicons
+                name={
+                  dashboard.decks.length ? "search-outline" : "albums-outline"
+                }
+                size={30}
+                color={colors.mutedForeground}
+              />
+              <Text className="text-base font-semibold text-foreground">
+                {dashboard.decks.length
+                  ? "No matching sets"
+                  : "Your library starts here"}
+              </Text>
+              <Text className="max-w-sm text-center text-sm leading-6 text-muted-foreground">
+                {dashboard.decks.length
+                  ? "Try another search or switch back to all sets."
+                  : "Create a set or import your notes to give your ideas a home."}
+              </Text>
+              {dashboard.decks.length ? (
+                <PrimaryButton
+                  label="Reset filters"
+                  variant="secondary"
+                  onPress={() => {
+                    setSearch("");
+                    setDueOnly(false);
+                  }}
+                />
+              ) : (
+                <PrimaryButton
+                  label="Create a set"
+                  onPress={() => router.push("/sets/new")}
+                />
+              )}
             </SectionCard>
-          ))
-        )}
+          ) : (
+            <View className="flex-row flex-wrap gap-4">
+              {filtered.map((deck) => (
+                <View
+                  key={deck.id}
+                  style={{ width: width >= 768 ? "48%" : "100%", flexGrow: 1 }}
+                >
+                  <DeckCard
+                    deck={deck}
+                    onPress={() => router.push(`/sets/${deck.id}`)}
+                  />
+                </View>
+              ))}
+            </View>
+          )}
+          <View className="mt-2 gap-4">
+            <View className="flex-row items-center justify-between gap-3">
+              <Text className="text-lg font-semibold text-foreground">
+                Recent activity
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                onPress={() => router.push("/history")}
+                className="min-h-11 justify-center px-2"
+              >
+                <Text className="text-xs font-semibold text-foreground">
+                  View history →
+                </Text>
+              </Pressable>
+            </View>
+            {dashboard.recentActivity.length ? (
+              <SectionCard className="gap-4">
+                {dashboard.recentActivity.slice(0, 3).map((item) => (
+                  <View key={item.id} className="flex-row items-start gap-3">
+                    <View className="h-9 w-9 items-center justify-center rounded-full bg-muted">
+                      <Ionicons
+                        name={
+                          item.type === "test"
+                            ? "checkmark-done-outline"
+                            : "book-outline"
+                        }
+                        size={17}
+                        color={colors.foreground}
+                      />
+                    </View>
+                    <View className="flex-1 gap-1">
+                      <Text className="text-sm font-semibold text-foreground">
+                        {item.title}
+                      </Text>
+                      <Text className="text-xs leading-5 text-muted-foreground">
+                        {item.subtitle}
+                      </Text>
+                      <Text className="text-[11px] text-muted-foreground">
+                        {getRelativeTime(item.happenedAt)}
+                      </Text>
+                    </View>
+                  </View>
+                ))}
+              </SectionCard>
+            ) : (
+              <EmptyState
+                title="A fresh start"
+                message="Your study sessions and test results will appear here."
+              />
+            )}
+          </View>
+        </View>
+        <View style={{ width: wide ? 300 : undefined, gap: 20 }}>
+          <StudyRewards />
+          <SectionCard className="gap-3">
+            <View className="flex-row items-center gap-2">
+              <Ionicons
+                name="pencil-outline"
+                size={18}
+                color={colors.foreground}
+              />
+              <Text className="text-base font-semibold text-foreground">
+                Think it through
+              </Text>
+            </View>
+            <Text className="text-sm leading-6 text-muted-foreground">
+              Work through statistics or write answers with your stylus. Your
+              draft is saved as you go.
+            </Text>
+            <PrimaryButton
+              label="Open practice"
+              variant="secondary"
+              onPress={() => router.push("/practice")}
+            />
+          </SectionCard>
+          <CloudMigrationCard />
+        </View>
       </View>
-
-      <SectionCard className="gap-3">
-        <Text className="text-xs font-medium uppercase tracking-[2px] text-ink-500 dark:text-ink-300">Account</Text>
-        <Text className="text-lg font-semibold text-ink-900 dark:text-white">{user?.email ?? "Signed in"}</Text>
-        <Text className="text-sm leading-6 text-ink-600 dark:text-ink-200">
-          {Platform.OS === "web"
-            ? "This browser uses your private Supabase library and requires a connection to save changes."
-            : "Signing out does not remove the local SQLite library from this device."}
-        </Text>
-        <SignOutButton />
-      </SectionCard>
     </AppScreen>
   );
 }

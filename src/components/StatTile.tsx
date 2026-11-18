@@ -1,7 +1,5 @@
 import { Text, View } from "react-native";
-
 import { SectionCard } from "./SectionCard";
-
 export function StatTile({
   label,
   value,
@@ -12,37 +10,16 @@ export function StatTile({
   tone?: "ink" | "sea" | "amber";
 }) {
   return (
-    <SectionCard
-      className={[
-        "flex-1 gap-2",
-        tone === "sea" ? "bg-secondary" : "",
-        tone === "amber" ? "bg-amber-500" : "",
-      ]
-        .filter(Boolean)
-        .join(" ")}
-    >
-      <Text
-        className={[
-          "text-xs font-medium uppercase tracking-[1.5px]",
-          tone === "sea"
-            ? "text-secondary-foreground"
-            : tone === "ink"
-              ? "text-ink-500 dark:text-ink-300"
-              : "text-ink-900",
-        ].join(" ")}
-      >
-        {label}
-      </Text>
-      <Text
-        className={[
-          "text-2xl font-bold",
-          tone === "sea"
-            ? "text-secondary-foreground"
-            : tone === "ink"
-              ? "text-ink-900 dark:text-white"
-              : "text-ink-900",
-        ].join(" ")}
-      >
+    <SectionCard className="flex-1 gap-3 px-3 py-4 md:px-5">
+      <View className="flex-row items-center gap-2">
+        <View
+          className={`h-1.5 w-1.5 rounded-full ${tone === "ink" ? "bg-foreground" : "bg-primary"}`}
+        />
+        <Text className="text-[10px] font-medium uppercase tracking-[1px] text-muted-foreground">
+          {label}
+        </Text>
+      </View>
+      <Text className="text-2xl font-semibold tracking-tight text-foreground">
         {value}
       </Text>
     </SectionCard>
