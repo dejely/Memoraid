@@ -48,7 +48,8 @@ Open **Supabase Dashboard > Authentication > URL Configuration** and configure:
 The production hostname and account-scoped preview pattern above match the
 currently linked Vercel project. The final pattern allows Vercel preview
 deployments for that account while keeping the production entry exact. The
-`memoraid` callback is used by installed native builds; while
+`memoraid` callback is used by installed Android builds for account confirmation
+and password reset and by native magic links on iOS. While
 testing in Expo Go, also add the development callback URL printed by Expo. If a
 custom domain is added later, make it the Site URL and add its
 exact sign-in return URL to the list.

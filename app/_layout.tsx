@@ -49,9 +49,9 @@ function RootNavigator() {
 }
 
 function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
-  const { dismissError, error, isLoading, retrySession, session, user } =
+  const { dismissError, error, isLoading, isRecoveringPassword, retrySession, session, user } =
     useAuth();
-  const userId = user?.id ?? null;
+  const userId = isRecoveringPassword ? null : user?.id ?? null;
   const [preparedUserId, setPreparedUserId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -110,7 +110,7 @@ function SessionBoundary({ queryClient }: { queryClient: QueryClient }) {
     );
   }
 
-  if (!session) {
+  if (!session || isRecoveringPassword) {
     return <SignInScreen />;
   }
 

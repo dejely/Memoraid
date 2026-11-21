@@ -190,7 +190,9 @@ Notes:
 - Run `npx eas-cli init` once before your first EAS build. It will create or link the Expo project and write a fresh `extra.eas.projectId` into `app.json`.
 - The current Android application id is `com.dejel.memoraid` in `app.json`. Change it before your first public release if you want a different package id.
 - Local EAS builds require your own Android toolchain on this machine, including Android SDK/NDK and Java.
-- Add the release app's `memoraid:///sign-in` callback (and the development callback printed by Expo) to Supabase Authentication redirect URLs before testing native magic links.
+- Add `memoraid:///sign-in` (and the development callback printed by Expo) to Supabase Authentication redirect URLs for Android account confirmation and password reset.
+
+Android uses Supabase email and password sign-in. Existing magic-link users can choose **Set or reset password** with their original email to keep their account and study data. Open the reset link on the Android device that requested it. New accounts receive a confirmation email when **Confirm email** is enabled in Supabase. Regular Android sign-ins use the saved password. The web app still uses email magic links.
 
 ## Web Deployment
 

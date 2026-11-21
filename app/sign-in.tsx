@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { AppScreen } from "../src/components/AppScreen";
+import { AndroidPasswordSignIn } from "../src/components/auth/AndroidPasswordSignIn";
 import { LoadingState } from "../src/components/LoadingState";
 import { PrimaryButton } from "../src/components/PrimaryButton";
 import { ScreenHeader } from "../src/components/ScreenHeader";
@@ -21,6 +22,13 @@ import {
 import { useAuth } from "../src/services/auth/AuthProvider";
 
 export default function SignInScreen() {
+  const { isRecoveringPassword } = useAuth();
+  return Platform.OS === "android"
+    ? <AndroidPasswordSignIn key={isRecoveringPassword ? "recovery" : "sign-in"} />
+    : <MagicLinkSignIn />;
+}
+
+function MagicLinkSignIn() {
   const themeColors = useThemeColors();
   const {
     dismissError,

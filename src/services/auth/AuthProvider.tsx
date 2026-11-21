@@ -35,6 +35,8 @@ type AuthState = {
 export type AuthContextValue = AuthState & {
   user: User | null;
   sendMagicLink: (email: string) => Promise<string>;
+  isRecoveringPassword: boolean;
+  finishPasswordRecovery: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
   retrySession: () => Promise<void>;
   dismissError: () => void;
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const clientRef = useRef<SupabaseClient | null>(null);
   const mountedRef = useRef(true);
   const handledCallbackUrls = useRef(new Set<string>());
+  const [recoveryUserId, setRecoveryUserId] = useState<string | null>(null);
   const [state, setState] = useState<AuthState>({
     session: null,
     isLoading: true,
@@ -166,6 +169,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (event === "SIGNED_OUT") { void clearWebAiCredentials().catch(() => {}); void authStorage.removeItem(OFFLINE_SESSION_KEY); }
       else if (session) void authStorage.setItem(OFFLINE_SESSION_KEY,JSON.stringify(session));
       if (mountedRef.current) {
+        if (Platform.OS === "android" && event === "PASSWORD_RECOVERY" && session) {
+          setRecoveryUserId(session.user.id);
+        } else if (event === "SIGNED_OUT") {
+          setRecoveryUserId(null);
+        }
         setState({ session, isLoading: false, error: null });
       }
     });
@@ -217,6 +225,16 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [getClient],
   );
 
+  const finishPasswordRecovery = useCallback(async (password: string): Promise<void> => {
+    if (!recoveryUserId || state.session?.user.id !== recoveryUserId) {
+      throw new Error("Request a fresh password reset email and try again.");
+    }
+
+    const { error } = await getClient().auth.updateUser({ password });
+    if (error) throw error;
+    setRecoveryUserId(null);
+  }, [getClient, recoveryUserId, state.session?.user.id]);
+
   const signOut = useCallback(async () => {
     setState((current) => ({ ...current, isLoading: true, error: null }));
 
@@ -229,6 +247,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       if (mountedRef.current) {
+        setRecoveryUserId(null);
         setState({ session: null, isLoading: false, error: null });
       }
     } catch (error) {
@@ -245,11 +264,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       ...state,
       user: state.session?.user ?? null,
       sendMagicLink,
+      isRecoveringPassword: Boolean(recoveryUserId && state.session?.user.id === recoveryUserId),
+      finishPasswordRecovery,
       signOut,
       retrySession: restoreSession,
       dismissError,
     }),
-    [dismissError, restoreSession, sendMagicLink, signOut, state],
+    [dismissError, finishPasswordRecovery, recoveryUserId, restoreSession, sendMagicLink, signOut, state],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
