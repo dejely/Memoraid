@@ -15,7 +15,6 @@ import {
 import { AppState, Platform } from "react-native";
 
 import { clearWebAiCredentials } from "../secure/ai-storage";
-import { clearGoogleCredentialState, getGoogleCredential } from "./android-google-sign-in";
 import { MemoraidAuthError, toMemoraidAuthError } from "./auth-errors";
 import {
   clearLocalSession,
@@ -36,7 +35,8 @@ type AuthState = {
 export type AuthContextValue = AuthState & {
   user: User | null;
   sendMagicLink: (email: string) => Promise<string>;
-  signInWithGoogle: () => Promise<void>;
+  isRecoveringPassword: boolean;
+  finishPasswordRecovery: (password: string) => Promise<void>;
   signOut: () => Promise<void>;
   retrySession: () => Promise<void>;
   dismissError: () => void;
@@ -48,6 +48,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
   const clientRef = useRef<SupabaseClient | null>(null);
   const mountedRef = useRef(true);
   const handledCallbackUrls = useRef(new Set<string>());
+  const [recoveryUserId, setRecoveryUserId] = useState<string | null>(null);
   const [state, setState] = useState<AuthState>({
     session: null,
     isLoading: true,
@@ -168,6 +169,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       if (event === "SIGNED_OUT") { void clearWebAiCredentials().catch(() => {}); void authStorage.removeItem(OFFLINE_SESSION_KEY); }
       else if (session) void authStorage.setItem(OFFLINE_SESSION_KEY,JSON.stringify(session));
       if (mountedRef.current) {
+        if (Platform.OS === "android" && event === "PASSWORD_RECOVERY" && session) {
+          setRecoveryUserId(session.user.id);
+        } else if (event === "SIGNED_OUT") {
+          setRecoveryUserId(null);
+        }
         setState({ session, isLoading: false, error: null });
       }
     });
@@ -219,28 +225,20 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [getClient],
   );
 
-  const signInWithGoogle = useCallback(async () => {
-    const client = getClient();
-    const credential = await getGoogleCredential();
-    if (!credential) {
-      return;
+  const finishPasswordRecovery = useCallback(async (password: string): Promise<void> => {
+    if (!recoveryUserId || state.session?.user.id !== recoveryUserId) {
+      throw new Error("Request a fresh password reset email and try again.");
     }
 
-    // The existing auth state listener persists the Supabase session.
-    const { error } = await client.auth.signInWithIdToken({
-      provider: "google",
-      ...credential,
-    });
-    if (error) {
-      throw error;
-    }
-  }, [getClient]);
+    const { error } = await getClient().auth.updateUser({ password });
+    if (error) throw error;
+    setRecoveryUserId(null);
+  }, [getClient, recoveryUserId, state.session?.user.id]);
 
   const signOut = useCallback(async () => {
     setState((current) => ({ ...current, isLoading: true, error: null }));
 
     try {
-      await clearGoogleCredentialState().catch(() => {});
       const { error } = await getClient().auth.signOut({scope:"local"});
       await authStorage.removeItem(OFFLINE_SESSION_KEY);
 
@@ -249,6 +247,7 @@ export function AuthProvider({ children }: PropsWithChildren) {
       }
 
       if (mountedRef.current) {
+        setRecoveryUserId(null);
         setState({ session: null, isLoading: false, error: null });
       }
     } catch (error) {
@@ -265,12 +264,13 @@ export function AuthProvider({ children }: PropsWithChildren) {
       ...state,
       user: state.session?.user ?? null,
       sendMagicLink,
-      signInWithGoogle,
+      isRecoveringPassword: Boolean(recoveryUserId && state.session?.user.id === recoveryUserId),
+      finishPasswordRecovery,
       signOut,
       retrySession: restoreSession,
       dismissError,
     }),
-    [dismissError, restoreSession, sendMagicLink, signInWithGoogle, signOut, state],
+    [dismissError, finishPasswordRecovery, recoveryUserId, restoreSession, sendMagicLink, signOut, state],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

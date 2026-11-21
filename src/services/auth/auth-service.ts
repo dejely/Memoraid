@@ -56,6 +56,32 @@ export async function requestMagicLink(email: string, client = getSupabaseClient
   return normalizedEmail;
 }
 
+export async function signInWithPassword(email: string, password: string): Promise<void> {
+  const { error } = await getSupabaseClient().auth.signInWithPassword({
+    email: normalizeSignInEmail(email),
+    password,
+  });
+  if (error) throw error;
+}
+
+export async function signUpWithPassword(email: string, password: string): Promise<boolean> {
+  const { data, error } = await getSupabaseClient().auth.signUp({
+    email: normalizeSignInEmail(email),
+    password,
+    options: { emailRedirectTo: getMagicLinkRedirectUrl() },
+  });
+  if (error) throw error;
+  return Boolean(data.session);
+}
+
+export async function sendPasswordReset(email: string): Promise<void> {
+  const { error } = await getSupabaseClient().auth.resetPasswordForEmail(
+    normalizeSignInEmail(email),
+    { redirectTo: getMagicLinkRedirectUrl() },
+  );
+  if (error) throw error;
+}
+
 export async function getStoredSession(client = getSupabaseClient()): Promise<Session | null> {
   const { data, error } = await client.auth.getSession();
 

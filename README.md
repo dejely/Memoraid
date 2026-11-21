@@ -190,20 +190,9 @@ Notes:
 - Run `npx eas-cli init` once before your first EAS build. It will create or link the Expo project and write a fresh `extra.eas.projectId` into `app.json`.
 - The current Android application id is `com.dejel.memoraid` in `app.json`. Change it before your first public release if you want a different package id.
 - Local EAS builds require your own Android toolchain on this machine, including Android SDK/NDK and Java.
-- Add the release app's `memoraid:///sign-in` callback (and the development callback printed by Expo) to Supabase Authentication redirect URLs before testing native magic links.
+- Add `memoraid:///sign-in` (and the development callback printed by Expo) to Supabase Authentication redirect URLs for Android account confirmation and password reset.
 
-### Enable Google Sign-In on Android
-
-Android builds configured for Google Sign-In open Android's account picker and use the existing Supabase account. Use the Google account with the same verified email as your Memoraid account to keep your study data. Email links remain available from the Android sign-in screen and are still the web sign-in method.
-
-1. In [Google Auth Platform](https://console.cloud.google.com/auth/clients), create a Web application OAuth client and an Android OAuth client in the same project. Add the callback URL shown by Supabase to the Web client.
-2. Register the Android client with package name `com.dejel.memoraid` and the SHA-1 of the certificate that signs the APK. The v1.1.0 GitHub APK uses `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`. For a differently signed APK, run `apksigner verify --print-certs path/to/memoraid.apk` and register an Android client for its SHA-1.
-3. Enable Google in the Supabase Auth provider settings. Enter the OAuth client IDs with the Web client ID first and enter the Web client secret in Supabase. Leave nonce verification enabled.
-4. Set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` to the Web client ID in `.env.local` for local builds and in the repository's Actions variables for GitHub APK builds. Rebuild the APK to include it. Use a Google account on the test user list if the OAuth app is in Testing mode.
-
-Install the new APK on an Android device with Google Play services and open **Sign in with Google**. Check that the account picker returns to Memoraid, that your existing decks are present after sync, and that signing out lets you choose an account again.
-
-[Supabase Google provider setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google) · [Android Credential Manager](https://developer.android.com/identity/sign-in/credential-manager-siwg-implementation)
+Android uses Supabase email and password sign-in. Existing magic-link users can choose **Set or reset password** with their original email to keep their account and study data. Open the reset link on the Android device that requested it. New accounts receive a confirmation email when **Confirm email** is enabled in Supabase. Regular Android sign-ins use the saved password. The web app still uses email magic links.
 
 ## Web Deployment
 

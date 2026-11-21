@@ -2,8 +2,6 @@ import { useThemeColors } from "../src/components/ThemeProvider";
 import { Redirect } from "expo-router";
 import { useState } from "react";
 import {
-  ActivityIndicator,
-  Image,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -13,6 +11,7 @@ import {
 } from "react-native";
 
 import { AppScreen } from "../src/components/AppScreen";
+import { AndroidPasswordSignIn } from "../src/components/auth/AndroidPasswordSignIn";
 import { LoadingState } from "../src/components/LoadingState";
 import { PrimaryButton } from "../src/components/PrimaryButton";
 import { ScreenHeader } from "../src/components/ScreenHeader";
@@ -21,9 +20,15 @@ import {
   toMemoraidAuthError,
 } from "../src/services/auth/auth-errors";
 import { useAuth } from "../src/services/auth/AuthProvider";
-import { canSignInWithGoogle } from "../src/services/auth/android-google-sign-in";
 
 export default function SignInScreen() {
+  const { isRecoveringPassword } = useAuth();
+  return Platform.OS === "android"
+    ? <AndroidPasswordSignIn key={isRecoveringPassword ? "recovery" : "sign-in"} />
+    : <MagicLinkSignIn />;
+}
+
+function MagicLinkSignIn() {
   const themeColors = useThemeColors();
   const {
     dismissError,
@@ -32,14 +37,11 @@ export default function SignInScreen() {
     retrySession,
     sendMagicLink,
     session,
-    signInWithGoogle,
   } = useAuth();
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [formError, setFormError] = useState<MemoraidAuthError | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [isSigningInWithGoogle, setIsSigningInWithGoogle] = useState(false);
-  const [useEmail, setUseEmail] = useState(false);
 
   if (isLoading) {
     return <LoadingState message="Checking your sign-in..." />;
@@ -50,31 +52,6 @@ export default function SignInScreen() {
   }
 
   const visibleError = formError ?? sessionError;
-  const showGoogle = canSignInWithGoogle && !useEmail;
-
-  async function handleGoogleSignIn(): Promise<void> {
-    setIsSigningInWithGoogle(true);
-    setFormError(null);
-    dismissError();
-
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      const authError = toMemoraidAuthError(error, "Google sign-in could not be completed.");
-      if (authError.kind === "invalid-session" || authError.kind === "rate-limit") {
-        setFormError(new MemoraidAuthError(
-          authError.kind,
-          authError.kind === "rate-limit"
-            ? "Too many sign-in attempts. Wait a moment and try again."
-            : "Your Google sign-in expired. Try again.",
-        ));
-      } else {
-        setFormError(authError);
-      }
-    } finally {
-      setIsSigningInWithGoogle(false);
-    }
-  }
 
   async function handleSendMagicLink(): Promise<void> {
     setIsSending(true);
@@ -112,9 +89,7 @@ export default function SignInScreen() {
             subtitle={
               sentTo
                 ? `We sent a secure sign-in link to ${sentTo}. Open it on this device to continue.`
-                : showGoogle
-                  ? "Already use Memoraid? Choose the Google account with the same email."
-                  : "Enter your email and we’ll send you a password-free magic link."
+                : "Enter your email and we’ll send you a password-free magic link."
             }
           />
 
@@ -126,7 +101,7 @@ export default function SignInScreen() {
               >
                 {visibleError.message}
               </Text>
-              {visibleError.kind === "network" && !(showGoogle && formError) ? (
+              {visibleError.kind === "network" ? (
                 <Pressable
                   accessibilityRole="button"
                   className="mt-3 self-start"
@@ -143,40 +118,7 @@ export default function SignInScreen() {
             </View>
           ) : null}
 
-          {showGoogle ? (
-            <View className="mt-6 gap-3">
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Sign in with Google"
-                accessibilityState={{
-                  busy: isSigningInWithGoogle,
-                  disabled: isSigningInWithGoogle,
-                }}
-                className="min-h-12 items-center justify-center self-center"
-                disabled={isSigningInWithGoogle}
-                onPress={() => void handleGoogleSignIn()}
-                style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1 })}
-              >
-                {isSigningInWithGoogle ? (
-                  <ActivityIndicator color={themeColors.primary} />
-                ) : (
-                  <Image
-                    source={require("../assets/google-sign-in-android.png")}
-                    style={{ width: 180, height: 40 }}
-                  />
-                )}
-              </Pressable>
-              <PrimaryButton
-                disabled={isSigningInWithGoogle}
-                label="Use an email link"
-                variant="secondary"
-                onPress={() => {
-                  editEmail();
-                  setUseEmail(true);
-                }}
-              />
-            </View>
-          ) : sentTo ? (
+          {sentTo ? (
             <View className="mt-6 gap-3">
               <PrimaryButton
                 label="Send another link"
@@ -222,20 +164,6 @@ export default function SignInScreen() {
               />
             </View>
           )}
-
-          {canSignInWithGoogle && useEmail ? (
-            <View className="mt-3">
-              <PrimaryButton
-                disabled={isSending}
-                label="Back to Google sign-in"
-                variant="secondary"
-                onPress={() => {
-                  editEmail();
-                  setUseEmail(false);
-                }}
-              />
-            </View>
-          ) : null}
 
           <Text className="mt-6 text-xs leading-5 text-ink-500 dark:text-ink-300">
             Your browser or device keeps a sign-in session so your private study
