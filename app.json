@@ -3,7 +3,7 @@
     "name": "Memoraid",
     "slug": "memoraid",
     "scheme": "memoraid",
-    "version": "1.1.0",
+    "version": "1.2.0",
     "orientation": "default",
     "userInterfaceStyle": "automatic",
     "web": {
@@ -12,7 +12,7 @@
     },
     "android": {
       "package": "com.dejel.memoraid",
-      "versionCode": 2
+      "versionCode": 3
     },
     "plugins": [
       "expo-router",
