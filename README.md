@@ -192,6 +192,19 @@ Notes:
 - Local EAS builds require your own Android toolchain on this machine, including Android SDK/NDK and Java.
 - Add the release app's `memoraid:///sign-in` callback (and the development callback printed by Expo) to Supabase Authentication redirect URLs before testing native magic links.
 
+### Enable Google Sign-In on Android
+
+Android builds configured for Google Sign-In open Android's account picker and use the existing Supabase account. Use the Google account with the same verified email as your Memoraid account to keep your study data. Email links remain available from the Android sign-in screen and are still the web sign-in method.
+
+1. In [Google Auth Platform](https://console.cloud.google.com/auth/clients), create a Web application OAuth client and an Android OAuth client in the same project. Add the callback URL shown by Supabase to the Web client.
+2. Register the Android client with package name `com.dejel.memoraid` and the SHA-1 of the certificate that signs the APK. The v1.1.0 GitHub APK uses `5E:8F:16:06:2E:A3:CD:2C:4A:0D:54:78:76:BA:A6:F3:8C:AB:F6:25`. For a differently signed APK, run `apksigner verify --print-certs path/to/memoraid.apk` and register an Android client for its SHA-1.
+3. Enable Google in the Supabase Auth provider settings. Enter the OAuth client IDs with the Web client ID first and enter the Web client secret in Supabase. Leave nonce verification enabled.
+4. Set `EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID` to the Web client ID in `.env.local` for local builds and in the repository's Actions variables for GitHub APK builds. Rebuild the APK to include it. Use a Google account on the test user list if the OAuth app is in Testing mode.
+
+Install the new APK on an Android device with Google Play services and open **Sign in with Google**. Check that the account picker returns to Memoraid, that your existing decks are present after sync, and that signing out lets you choose an account again.
+
+[Supabase Google provider setup](https://supabase.com/docs/guides/auth/social-sign-in/auth-google) · [Android Credential Manager](https://developer.android.com/identity/sign-in/credential-manager-siwg-implementation)
+
 ## Web Deployment
 
 Previously signed-in users can practice downloaded content offline. Web uses IndexedDB and a production service worker for static assets; native uses account-scoped SQLite. Supabase sync uses owner-scoped versioned operations, cursor pulls, idempotent review events and explicit conflict resolution. Native users can explicitly adopt their older shared device library in Settings. See [adaptive learning setup and rollout](docs/ADAPTIVE_LEARNING.md).
