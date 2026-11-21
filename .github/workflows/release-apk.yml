@@ -1,6 +1,9 @@
 name: Build Release APK
 
 on:
+  push:
+    branches:
+      - feat/unimernet-recognition
   release:
     types:
       - published
@@ -20,7 +23,7 @@ jobs:
     timeout-minutes: 90
     env:
       CI: true
-      RELEASE_TAG: ${{ github.event.release.tag_name || format('manual-{0}', github.run_number) }}
+      RELEASE_TAG: ${{ github.event.release.tag_name || format('{0}-{1}', github.event_name == 'push' && 'unimernet' || 'manual', github.run_number) }}
     steps:
       - name: Validate signing secrets
         env:
@@ -52,7 +55,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Install dependencies
@@ -90,7 +93,12 @@ jobs:
         run: node .github/scripts/configure-android-signing.mjs
 
       - name: Build signed release APK
+        env:
+          EXPO_PUBLIC_SUPABASE_URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
         run: |
+          : "${EXPO_PUBLIC_SUPABASE_URL:?Missing public Supabase URL}"
+          : "${EXPO_PUBLIC_SUPABASE_ANON_KEY:?Missing public Supabase anon or publishable key}"
           cd android
           chmod +x gradlew
           ./gradlew app:assembleRelease

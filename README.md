@@ -27,7 +27,7 @@ Memoraid is a Quizlet-style study app built with Expo for Android, iOS, and the 
 - Test mode with multiple choice, true/false, and written response questions.
 - Auto-grading for objective questions and guided self-review for written responses.
 - Math entry with statistics/probability keyboards and equation rendering across study views.
-- Stylus handwriting transcription with user-provided Gemini/OpenRouter keys and provider fallback.
+- Stylus handwriting transcription with [self-hosted UniMERNet](services/unimernet/README.md) and optional free OpenRouter fallback.
 - Numeric/expression grading with guided self-review for unsupported answers.
 - Daily quests, XP, levels, streaks, and topic practice progress.
 - Settings with account-scoped on-device credentials.
@@ -132,6 +132,34 @@ npm run aab:local
 ```
 
 ## Android Release Builds
+
+### Build a standalone APK locally
+
+Use Node.js 22, JDK 17, and the Android SDK. Set `JAVA_HOME` and
+`ANDROID_HOME` to your installations, then create `.env.local` with the
+two public Supabase values from `.env.example`.
+
+```bash
+npm ci
+npx expo prebuild --platform android --no-install
+(cd android && ./gradlew app:assembleRelease)
+adb install -r android/app/build/outputs/apk/release/app-release.apk
+```
+
+Expo's generated release build is signed with the debug key unless you
+configure release signing. Android requires matching signatures to update
+an installed app. Use the signed CI artifact to update an installation
+from the GitHub release.
+
+UniMERNet runs separately from the APK. Start the
+[recognition service](services/unimernet/README.md) and configure the
+Supabase `study-ai` relay with its URL and token. A hosted relay needs an
+HTTPS endpoint it can reach.
+
+Pushes to `feat/unimernet-recognition` produce a signed APK in the
+**Build Release APK** workflow's artifacts.
+
+### Build with EAS
 
 For an installable release APK:
 
