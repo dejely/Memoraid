@@ -17,3 +17,5 @@ android/app/release.keystore
 .env.local
 src/generated/
 output/playwright/
+
+.venv-unimernet/

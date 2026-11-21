@@ -12,11 +12,13 @@ import {
 } from "../../../supabase/functions/_shared/openrouter-policy";
 import { getSupabaseClient } from "../auth/supabase-client";
 import { loadAiConfiguration } from "../secure/ai-storage";
-import type {
-  AiCredentials,
-  AiProvider,
-  AiSettings,
-  RecognitionResult,
+import {
+  DEFAULT_AI_SETTINGS,
+  EMPTY_CREDENTIALS,
+  type AiCredentials,
+  type AiProvider,
+  type AiSettings,
+  type RecognitionResult,
 } from "./config";
 
 export async function callAiRelay(
@@ -73,15 +75,11 @@ export async function recognizeMath(
 ): Promise<RecognitionResult> {
   const { data } = await getSupabaseClient().auth.getSession();
   if (!data.session) throw new Error("Sign in before recognizing handwriting.");
-  const config = await loadAiConfiguration(data.session.user.id);
-  if (
-    !config.credentials.gemini.trim() &&
-    !config.credentials.openrouter.trim()
-  )
-    throw new Error(
-      "Add an API key in Settings before recognizing handwriting.",
-    );
   const account = data.session.user.id;
+  const { settings, credentials } = await loadAiConfiguration(account).catch(
+    () => ({ settings: DEFAULT_AI_SETTINGS, credentials: EMPTY_CREDENTIALS }),
+  );
+  const fallbackKey = settings.fallbackEnabled ? credentials.openrouter.trim() : "";
   if (cacheAccount !== account) {
     cache.clear();
     cacheAccount = account;
@@ -89,7 +87,9 @@ export async function recognizeMath(
   const key = JSON.stringify([
     account,
     PREPROCESSING_VERSION,
-    config.settings,
+    settings.openrouterModel,
+    settings.fallbackEnabled,
+    Boolean(fallbackKey),
     image,
   ]);
   const cached = cache.has(key);
@@ -98,7 +98,8 @@ export async function recognizeMath(
       callAiRelay(
         {
           operation: "recognizeMath",
-          ...config,
+          settings,
+          credentials: { gemini: "", openrouter: fallbackKey },
           image,
           requestId: `ink-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         },
