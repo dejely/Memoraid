@@ -10,6 +10,8 @@ yarn-error.*
 .env*
 !.env.example
 android
+!/modules/android-google-sign-in/android/
+/modules/android-google-sign-in/android/build/
 *.keystore
 *.jks
 android/app/release.keystore
