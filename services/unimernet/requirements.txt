@@ -1,0 +1,6 @@
+unimernet==0.2.3
+# UniMERNet pins Transformers 4.42, which requires NumPy 1.x.
+numpy==1.26.4
+pyarrow==21.0.0
+fastapi==0.115.12
+uvicorn==0.34.3

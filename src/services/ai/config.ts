@@ -25,7 +25,7 @@ export interface RecognitionResult {
   networkMs?: number;
   latex: string;
   unreadable: boolean;
-  provider: AiProvider;
+  provider: AiProvider | "unimernet";
   model: string;
 }
 export function decodeAiConfiguration(raw: string | null): {

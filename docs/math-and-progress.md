@@ -13,17 +13,34 @@ npx supabase db push
 npx supabase functions deploy study-ai
 ```
 
-Review the linked project and migration list before running these commands. The function uses the standard `SUPABASE_URL` and `SUPABASE_ANON_KEY` provided by Supabase. It verifies the bearer token with Auth before processing any operation. It requires no application-owned Gemini/OpenRouter secret. With newer Supabase publishable-key configurations, gateway JWT validation may reject tokens before the function executes; if needed deploy with `--no-verify-jwt`, retaining the explicit `auth.getUser(token)` validation in the function. Never remove that validation.
+Review the linked project and migration list before running these commands. The function uses the standard `SUPABASE_URL` and `SUPABASE_ANON_KEY` provided by Supabase. It verifies the bearer token with Auth before processing any operation. UniMERNet settings belong in the Edge Function's server-side environment. With newer Supabase publishable-key configurations, gateway JWT validation may reject tokens before the function executes; if needed deploy with `--no-verify-jwt`, retaining the explicit `auth.getUser(token)` validation in the function. Never remove that validation.
 
 Build/deploy the web frontend after applying the migration. New web card queries and progress writes require the new schema. Rebuild the native app to include WebView and landscape support; an OTA update alone does not install native dependencies.
 
-## User settings
+## Handwriting recognition setup
 
-Open **Settings**, enter one or both personal API keys, select image-capable model IDs, and save. **Test connection** tests the current field values before saving. The defaults are `gemini-3.5-flash-lite` and `openrouter/free`. OpenRouter accepts only its free router or model IDs ending in `:free`, such as `google/gemma-4-31b-it:free`; choose an image-capable model for handwriting. The free router automatically chooses a free model supporting the request. Previously saved paid selections switch to the free router when loaded, preserving API keys. Gemini usage charges may apply independently.
+[Run the UniMERNet CPU service](../services/unimernet/README.md) and set
+`UNIMERNET_URL` and `UNIMERNET_TOKEN` in the Edge Function's environment before
+deploying `study-ai`. The relay authenticates the user, sends just the PNG to
+UniMERNet, and gives the request 12 seconds. UniMERNet uses an app-level token
+and requires no personal key.
 
-Keys stay in account-scoped SecureStore on mobile. On web they are stored in sessionStorage for the current tab and cleared on sign-out. They are never included in library uploads, query caches, public environment variables, URLs, server tables, or application logs. The authenticated relay receives them transiently in the HTTPS request body. Do not enable request-body logging in a proxy or monitoring integration for this endpoint.
+In **Settings → Recognition**, optionally save a personal OpenRouter key and
+enable free fallback. Use `openrouter/free` or an image-capable model ID ending
+in `:free`. **Test connection** tests the current OpenRouter fields. Previously
+saved paid model IDs switch to the free router when loaded. A saved Gemini key
+can be removed from Settings.
 
-Gemini runs first when configured. With automatic fallback enabled, OpenRouter runs after a provider timeout/error or malformed transcription. Either provider works alone. Disabling fallback uses only the first configured provider. Each provider gets one attempt and 20 seconds; output is capped at 2,048 tokens. Browser/native requests have a 45-second deadline. Unreadable handwriting is a valid response and does not trigger another provider attempt. Cancellation or invalid app authentication does not trigger fallback. OpenRouter requests cap prompt, completion, and per-request prices at zero. Paid models and paid automatic routes are rejected before any provider request, including on fallback. Free availability and usage limits still apply; a rate limit does not cause a switch to a paid model.
+If UniMERNet is unavailable, times out, or returns an unusable transcription,
+the relay can make one OpenRouter attempt with a 20-second deadline and zero
+price caps. The attempt requires both an enabled fallback and a key. Invalid
+input, expired app authentication, and cancellation stop the request. The
+browser and native app keep a 45-second overall deadline.
+
+Personal keys stay in the current browser tab's session or in account-scoped
+SecureStore on mobile. The relay receives the OpenRouter key transiently when
+fallback is enabled. Recognition services receive the drawing for transcription
+and return LaTeX for the existing editable preview.
 
 ## Studying math
 

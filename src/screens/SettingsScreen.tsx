@@ -82,18 +82,37 @@ export default function SettingsScreen() {
       setBusy(false);
     }
   }
-  async function test(provider: AiProvider) {
+  async function deleteKey(provider: AiProvider) {
+    if (!user) return;
+    const next = { ...credentials, [provider]: "" };
+    setBusy(true);
+    try {
+      await saveAiConfiguration(user.id, settings, next);
+      setCredentials(next);
+      setMessage("Key deleted.");
+    } catch {
+      setMessage("Key deletion failed. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function testFallback() {
     setBusy(true);
     setMessage("");
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 45000);
     try {
       const result = await callAiRelay(
-        { operation: "testConnection", provider, settings, credentials },
+        {
+          operation: "testConnection",
+          provider: "openrouter",
+          settings,
+          credentials: { gemini: "", openrouter: credentials.openrouter },
+        },
         controller.signal,
       );
       setMessage(
-        `${provider}: connected to ${result.model}.${provider === "openrouter" ? " Free model; usage limits apply." : " Gemini usage charges may apply."}`,
+        `OpenRouter connected to ${result.model}. Free model usage limits apply.`,
       );
     } catch (error) {
       setMessage(error instanceof Error ? error.message : "Connection failed.");
@@ -148,116 +167,78 @@ export default function SettingsScreen() {
               Handwriting recognition
             </Text>
             <Text className="text-sm leading-6 text-muted-foreground">
-              Connect a provider to turn your handwriting into an editable
-              answer. Math entry and self-review work without keys.
+              UniMERNet turns handwritten equations into editable LaTeX when
+              it’s available. It uses your drawing and requires no personal API key.
             </Text>
           </View>
           <SectionCard className="gap-3">
-            <Text className="text-base leading-6 text-ink-900 dark:text-white">
-              Enter your own API keys. Recognition sends your drawing and
-              credentials through Memoraid’s authenticated relay to the selected
-              provider. Keys are never saved on the server. OpenRouter uses free
-              models only; Gemini usage charges may apply.
+            <Text className="text-lg font-semibold text-foreground">
+              OpenRouter fallback
             </Text>
-            <Text className="text-sm text-ink-600 dark:text-ink-200">
+            <Text className="text-sm leading-6 text-muted-foreground">
+              Enable fallback to send the drawing to a free vision model when
+              UniMERNet can’t read it or is unavailable.
+            </Text>
+            <Text className="text-sm text-muted-foreground">
               {Platform.OS === "web"
-                ? "Keys stay in this tab’s session and clear when you sign out or close it."
-                : "Keys are kept in secure storage for this account on this device."}{" "}
-              Math entry and self-review work without keys.
+                ? "Your key is stored for this tab’s session."
+                : "Your key stays in secure account storage on this device."}
             </Text>
-          </SectionCard>
-          <View className="flex-row flex-wrap gap-4">
-            {(["gemini", "openrouter"] as const).map((provider) => (
-              <SectionCard
-                key={provider}
-                className="min-w-[280px] flex-1 gap-3"
-              >
-                <Text className="text-lg font-semibold text-ink-900 dark:text-white">
-                  {provider === "gemini"
-                    ? "Gemini · primary"
-                    : "OpenRouter · free models only"}
-                </Text>
-                <TextInput
-                  accessibilityLabel={`${provider} API key`}
-                  secureTextEntry
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  value={credentials[provider]}
-                  onChangeText={(value) =>
-                    setCredentials((current) => ({
-                      ...current,
-                      [provider]: value,
-                    }))
-                  }
-                  placeholder="API key"
-                  placeholderTextColor={themeColors.mutedForeground}
-                  className="min-h-12 rounded-xl border border-border bg-input p-4 text-foreground"
-                />
-                <FormField
-                  label="Model ID"
-                  value={
-                    provider === "gemini"
-                      ? settings.geminiModel
-                      : settings.openrouterModel
-                  }
-                  onChangeText={(value) =>
-                    setSettings((current) => ({
-                      ...current,
-                      [provider === "gemini"
-                        ? "geminiModel"
-                        : "openrouterModel"]: value.trim(),
-                    }))
-                  }
-                />
-                {provider === "openrouter" ? (
-                  <Text className="text-sm text-ink-600 dark:text-ink-200">
-                    Use openrouter/free to select a free model automatically, or
-                    an image-capable model ending in :free. Free models have
-                    usage limits; paid models are blocked.
-                  </Text>
-                ) : null}
-                <View className="flex-row flex-wrap gap-2">
-                  <PrimaryButton
-                    label="Test connection"
-                    disabled={!ready || busy || !credentials[provider].trim()}
-                    onPress={() => void test(provider)}
-                  />
-                  <PrimaryButton
-                    label="Delete key"
-                    variant="secondary"
-                    disabled={!ready || busy}
-                    onPress={() => {
-                      if (!user) return;
-                      const next = { ...credentials, [provider]: "" };
-                      setCredentials(next);
-                      setBusy(true);
-                      void saveAiConfiguration(user.id, settings, next)
-                        .then(() => setMessage("Key deleted."))
-                        .catch(() =>
-                          setMessage("Key deletion failed. Try again."),
-                        )
-                        .finally(() => setBusy(false));
-                    }}
-                  />
-                </View>
-              </SectionCard>
-            ))}
-          </View>
-          <View className="flex-row items-center gap-4">
-            <ThemedSwitch
-              accessibilityLabel="Automatic provider fallback"
-              value={settings.fallbackEnabled}
-              onValueChange={(value) =>
-                setSettings((current) => ({
-                  ...current,
-                  fallbackEnabled: value,
-                }))
+            <TextInput
+              accessibilityLabel="OpenRouter API key"
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              value={credentials.openrouter}
+              onChangeText={(value) =>
+                setCredentials((current) => ({ ...current, openrouter: value }))
+              }
+              placeholder="OpenRouter API key"
+              placeholderTextColor={themeColors.mutedForeground}
+              className="min-h-12 rounded-xl border border-border bg-input p-4 text-foreground"
+            />
+            <FormField
+              label="Model ID"
+              value={settings.openrouterModel}
+              onChangeText={(value) =>
+                setSettings((current) => ({ ...current, openrouterModel: value.trim() }))
               }
             />
-            <Text className="text-ink-900 dark:text-white">
-              Automatic fallback
+            <Text className="text-sm text-muted-foreground">
+              Use openrouter/free or an image-capable model ending in :free.
             </Text>
-          </View>
+            <View className="flex-row items-center gap-4">
+              <ThemedSwitch
+                accessibilityLabel="Free OpenRouter fallback"
+                value={settings.fallbackEnabled}
+                onValueChange={(value) =>
+                  setSettings((current) => ({ ...current, fallbackEnabled: value }))
+                }
+              />
+              <Text className="text-foreground">Enable free fallback</Text>
+            </View>
+            <View className="flex-row flex-wrap gap-2">
+              <PrimaryButton
+                label="Test connection"
+                disabled={!ready || busy || !credentials.openrouter.trim()}
+                onPress={() => void testFallback()}
+              />
+              <PrimaryButton
+                label="Delete key"
+                variant="secondary"
+                disabled={!ready || busy || !credentials.openrouter}
+                onPress={() => void deleteKey("openrouter")}
+              />
+            </View>
+            {credentials.gemini ? (
+              <PrimaryButton
+                label="Remove saved Gemini key"
+                variant="secondary"
+                disabled={!ready || busy}
+                onPress={() => void deleteKey("gemini")}
+              />
+            ) : null}
+          </SectionCard>
           <PrimaryButton
             label="Save settings"
             disabled={!ready}

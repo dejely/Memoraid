@@ -1,4 +1,4 @@
-import { RelayError, runRecognition, validateInput } from "./recognition.ts";
+import { RelayError, runRecognition, validateInput, type UniMerNetConfig } from "./recognition.ts";
 const cors = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, apikey, content-type, x-client-info",
@@ -10,6 +10,7 @@ export async function handleRecognitionRequest(
   authenticate: (token: string) => Promise<boolean>,
   fetcher: typeof fetch = fetch,
   report?: Parameters<typeof runRecognition>[3],
+  unimernet?: UniMerNetConfig,
 ) {
   const json = (body: unknown, status = 200) =>
     new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
@@ -48,9 +49,9 @@ export async function handleRecognitionRequest(
     } catch {
       throw new RelayError("Invalid JSON.");
     }
-    const requestId = typeof raw.requestId === "string" && /^[a-zA-Z0-9:_-]{1,80}$/.test(raw.requestId) ? raw.requestId : crypto.randomUUID();
+    const requestId = typeof raw?.requestId === "string" && /^[a-zA-Z0-9:_-]{1,80}$/.test(raw.requestId) ? raw.requestId : crypto.randomUUID();
     const upstreamStarted = Date.now();
-    const result = await runRecognition(validateInput(raw), fetcher, request.signal, metric => report?.({ ...metric, requestId }));
+    const result = await runRecognition(validateInput(raw), fetcher, request.signal, metric => report?.({ ...metric, requestId }), unimernet);
     return json({ ...result, requestId, timings: { authMs, upstreamMs: Date.now() - upstreamStarted } });
   } catch (error) {
     // Never echo provider response bodies or request details containing credentials/ink.

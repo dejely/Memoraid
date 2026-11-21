@@ -21,91 +21,104 @@ if (!url || !anon || !token)
 const samples: { id: string; truth: string; imagePath: string }[] = JSON.parse(
   readFileSync(corpusPath, "utf8"),
 );
-const models: { provider: "gemini" | "openrouter"; model: string }[] =
+const models: { provider: "unimernet" | "openrouter"; model: string }[] =
   JSON.parse(readFileSync(modelsPath, "utf8"));
 if (
   !samples.length ||
   new Set(samples.map((s) => s.id)).size !== samples.length
 )
   throw new Error("Use nonempty unique sample IDs.");
-for (const entry of models)
+for (const { provider, model } of models) {
   if (
-    !["gemini", "openrouter"].includes(entry.provider) ||
-    (entry.provider === "openrouter" && !isFreeOpenRouterModel(entry.model))
+    (provider !== "unimernet" || model !== "unimernet-tiny") &&
+    (provider !== "openrouter" || !isFreeOpenRouterModel(model))
   )
-    throw new Error("Only free OpenRouter models are allowed.");
-const records: BenchmarkRecord[] = [];
-writeFileSync(outputPath, "");
-for (const entry of models) {
-  const key =
-    entry.provider === "gemini"
-      ? process.env.MEMORAID_GEMINI_KEY
-      : process.env.MEMORAID_OPENROUTER_KEY;
-  if (!key) throw new Error(`Missing environment key for ${entry.provider}.`);
-  for (const sample of samples) {
-    const png = readFileSync(resolve(dirname(corpusPath), sample.imagePath));
-    if (
-      png.length > 1500000 ||
-      png.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a"
-    )
-      throw new Error("Corpus images must be bounded cropped PNGs.");
-    const started = performance.now();
-    const controller = new AbortController(),
-      timer = setTimeout(() => controller.abort(), 45000);
-    let prediction = "",
-      model = entry.model,
-      failed = false;
-    try {
-      const response = await fetch(`${url}/functions/v1/study-ai`, {
-        method: "POST",
-        headers: {
-          authorization: `Bearer ${token}`,
-          apikey: anon,
-          "content-type": "application/json",
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          operation: "recognizeMath",
-          requestId: `bench-${Date.now()}`,
-          image: `data:image/png;base64,${png.toString("base64")}`,
-          settings: {
-            ...DEFAULT_AI_SETTINGS,
-            [entry.provider === "gemini" ? "geminiModel" : "openrouterModel"]:
-              entry.model,
-            fallbackEnabled: false,
-          },
-          credentials: {
-            gemini: entry.provider === "gemini" ? key : "",
-            openrouter: entry.provider === "openrouter" ? key : "",
-          },
-        }),
-      });
-      if (!response.ok) throw new Error("Provider request failed");
-      const result = await response.json();
-      prediction = result.latex ?? "";
-      model = result.model ?? model;
-      failed = !!result.unreadable;
-    } catch {
-      failed = true;
-    } finally {
-      clearTimeout(timer);
-    }
-    const record = {
-      sampleId: sample.id,
-      truth: sample.truth,
-      prediction,
-      durationMs: performance.now() - started,
-      failed,
-      provider: entry.provider,
-      model,
-    };
-    records.push(record);
-    appendFileSync(outputPath, JSON.stringify(record) + "\n");
-  }
-  console.log(
-    `${entry.provider}/${entry.model}`,
-    JSON.stringify(
-      summarizeBenchmark(records.filter((r) => r.provider === entry.provider)),
-    ),
-  );
+    throw new Error("Use unimernet-tiny or a free OpenRouter model.");
 }
+const openrouterKey = process.env.MEMORAID_OPENROUTER_KEY?.trim() ?? "";
+if (models.some((entry) => entry.provider === "openrouter") && !openrouterKey)
+  throw new Error("Set MEMORAID_OPENROUTER_KEY to benchmark OpenRouter.");
+async function runBenchmark() {
+  const records: BenchmarkRecord[] = [];
+  writeFileSync(outputPath, "");
+  for (const entry of models) {
+    const useOpenRouter = entry.provider === "openrouter";
+    const firstRecord = records.length;
+    for (const sample of samples) {
+      const png = readFileSync(resolve(dirname(corpusPath), sample.imagePath));
+      if (
+        png.length > 1500000 ||
+        png.subarray(0, 8).toString("hex") !== "89504e470d0a1a0a"
+      )
+        throw new Error("Corpus images must be bounded cropped PNGs.");
+      const started = performance.now();
+      const controller = new AbortController(),
+        timer = setTimeout(() => controller.abort(), 45000);
+      let prediction = "",
+        model = entry.model,
+        failed = false;
+      let returnedProvider: string | undefined;
+      try {
+        const response = await fetch(`${url}/functions/v1/study-ai`, {
+          method: "POST",
+          headers: {
+            authorization: `Bearer ${token}`,
+            apikey: anon,
+            "content-type": "application/json",
+          },
+          signal: controller.signal,
+          body: JSON.stringify({
+            operation: "recognizeMath",
+            requestId: `bench-${Date.now()}`,
+            image: `data:image/png;base64,${png.toString("base64")}`,
+            settings: {
+              ...DEFAULT_AI_SETTINGS,
+              openrouterModel: useOpenRouter ? entry.model : DEFAULT_AI_SETTINGS.openrouterModel,
+              fallbackEnabled: useOpenRouter,
+            },
+            credentials: {
+              gemini: "",
+              openrouter: useOpenRouter ? openrouterKey : "",
+            },
+          }),
+        });
+        if (!response.ok) throw new Error("Provider request failed");
+        const result = await response.json();
+        returnedProvider = result.provider;
+        prediction = result.latex ?? "";
+        model = result.model ?? model;
+        failed = !!result.unreadable;
+      } catch {
+        failed = true;
+      } finally {
+        clearTimeout(timer);
+      }
+      if ((!failed || returnedProvider !== undefined) && returnedProvider !== entry.provider)
+        throw new Error(
+          `Expected ${entry.provider}, got ${returnedProvider ?? "no provider"}. Check the relay configuration.`,
+        );
+      const record = {
+        sampleId: sample.id,
+        truth: sample.truth,
+        prediction,
+        durationMs: performance.now() - started,
+        failed,
+        provider: entry.provider,
+        model,
+      };
+      records.push(record);
+      appendFileSync(outputPath, JSON.stringify(record) + "\n");
+    }
+    console.log(
+      `${entry.provider}/${entry.model}`,
+      JSON.stringify(
+        summarizeBenchmark(records.slice(firstRecord)),
+      ),
+    );
+  }
+}
+
+void runBenchmark().catch((error: unknown) => {
+  console.error(error instanceof Error ? error.message : "Benchmark failed.");
+  process.exitCode = 1;
+});

@@ -1,10 +1,10 @@
 # Recognition evaluation
 
-No real handwriting accuracy or device latency result is claimed. Provider defaults and deadlines are unchanged.
+The synthetic equation smoke test verifies the recognition path. Measure accuracy and latency separately with real stylus input.
 
 ## Cloud recognition
 
-Collect consented held-out stylus drawings. Label samples independently before recognition. Do not commit keys, tokens, raw ink or identifying data in reports. Configure your own keys in Settings and compare explicit free vision-capable OpenRouter models with `openrouter/free`, recording the actual returned model. The relay receives only the cropped PNG, never the expected answer.
+Collect consented held-out stylus drawings and label them independently before recognition. Keep reports free of keys, tokens, raw ink and identifying data. Compare UniMERNet Tiny and the free OpenRouter fallback using the same samples. Record the actual returned model. The recognizers receive the cropped PNG, and labels stay local to the benchmark.
 
 Write JSONL records with `sampleId`, `truth`, `prediction`, `durationMs`, `failed`, `provider`, `model`. Duration is observed end-to-end preview time; the UI separately reports preparation, auth, upstream and preview-ready timings. Summarize locally:
 
@@ -28,10 +28,10 @@ npx tsx scripts/local-recognition-benchmark.ts /path/to/dataset.json
 
 Promotion requires both device reports, >=100 disjoint real held-out samples, >=95% accuracy, warm p95 <=1000ms, model <=25MB, measured additional memory <=150MB. Missing memory/device evidence fails. Review dataset provenance even if numerical gates pass. The lab does not promote production recognition or claim full-equation offline support. Issue #16 remains open for real evaluation.
 
-For an actual relay benchmark, prepare a JSON corpus of `{ "id": "unique", "truth": "LaTeX label", "imagePath": "cropped.png" }` and a model matrix of `{ "provider": "openrouter", "model": "openrouter/free" }` entries. Supply `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, `MEMORAID_ACCESS_TOKEN` and your `MEMORAID_OPENROUTER_KEY` / `MEMORAID_GEMINI_KEY` through your environment, never command arguments or committed files. Running this command makes provider calls and may consume quota (or incur Gemini charges):
+For a relay benchmark, prepare a JSON corpus of `{ "id": "unique", "truth": "LaTeX label", "imagePath": "cropped.png" }` entries and a separate model list for each provider. Use `{ "provider": "unimernet", "model": "unimernet-tiny" }` with the configured relay. Use `{ "provider": "openrouter", "model": "openrouter/free" }` or explicit free model IDs with an isolated relay that has no UniMERNet endpoint configured. Supply `EXPO_PUBLIC_SUPABASE_URL`, `EXPO_PUBLIC_SUPABASE_ANON_KEY`, and `MEMORAID_ACCESS_TOKEN` through the environment. For OpenRouter, also supply `MEMORAID_OPENROUTER_KEY`. OpenRouter benchmark calls consume free quota.
 
 ```sh
 npx tsx scripts/run-cloud-benchmark.ts corpus.json models.json report.jsonl
 ```
 
-This runner records relay round-trip latency, not UI preview latency. Capture the UI stage timings separately. It runs samples serially, preserves failures in the report, allows only free OpenRouter IDs, and sends neither labels nor expected answers to the relay.
+The runner records relay round-trip latency and preserves failures in the report. Capture UI preview time separately.
