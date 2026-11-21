@@ -15,7 +15,6 @@ import {
 import { AppState, Platform } from "react-native";
 
 import { clearWebAiCredentials } from "../secure/ai-storage";
-import { clearGoogleCredentialState, getGoogleCredential } from "./android-google-sign-in";
 import { MemoraidAuthError, toMemoraidAuthError } from "./auth-errors";
 import {
   clearLocalSession,
@@ -36,7 +35,6 @@ type AuthState = {
 export type AuthContextValue = AuthState & {
   user: User | null;
   sendMagicLink: (email: string) => Promise<string>;
-  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   retrySession: () => Promise<void>;
   dismissError: () => void;
@@ -219,28 +217,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
     [getClient],
   );
 
-  const signInWithGoogle = useCallback(async () => {
-    const client = getClient();
-    const credential = await getGoogleCredential();
-    if (!credential) {
-      return;
-    }
-
-    // The existing auth state listener persists the Supabase session.
-    const { error } = await client.auth.signInWithIdToken({
-      provider: "google",
-      ...credential,
-    });
-    if (error) {
-      throw error;
-    }
-  }, [getClient]);
-
   const signOut = useCallback(async () => {
     setState((current) => ({ ...current, isLoading: true, error: null }));
 
     try {
-      await clearGoogleCredentialState().catch(() => {});
       const { error } = await getClient().auth.signOut({scope:"local"});
       await authStorage.removeItem(OFFLINE_SESSION_KEY);
 
@@ -265,12 +245,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
       ...state,
       user: state.session?.user ?? null,
       sendMagicLink,
-      signInWithGoogle,
       signOut,
       retrySession: restoreSession,
       dismissError,
     }),
-    [dismissError, restoreSession, sendMagicLink, signInWithGoogle, signOut, state],
+    [dismissError, restoreSession, sendMagicLink, signOut, state],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
